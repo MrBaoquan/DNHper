@@ -37,50 +37,17 @@ namespace DNHper {
             return Process.GetProcesses ().ToList ().Where (_process => _process.ProcessName == ProcessName).FirstOrDefault ();
         }
 
-        public static void KeepTopWindow (string ProcessName) {
-            var _process = FindProcess (ProcessName);
-            if (_process == default (Process)) return;
-            if (_process.MainWindowHandle != WinAPI.GetForegroundWindow ()) {
-                var Hwnd = _process.MainWindowHandle;
-                WinAPI.SetWindowPos ((IntPtr) Hwnd, (int) HWndInsertAfter.HWND_TOPMOST,
-                    0, 0, 0, 0,
-                    SetWindowPosFlags.SWP_SHOWWINDOW | SetWindowPosFlags.SWP_NOMOVE | SetWindowPosFlags.SWP_NOSIZE | SetWindowPosFlags.SWP_FRAMECHANGED);
-                WinAPI.ShowWindow (Hwnd, 3);
-                WinAPI.SetForegroundWindow (Hwnd);
-            }
-        }
 
-        public static void OpenProcess (string Path, string Args = "") {
+        public static bool OpenProcess (string Path, string Args = "") {
             Process.Start (Path, Args);
+            return true;
         }
 
-        public static void OpenProcessIfNotOpend (string Path, string Args = "") {
+        public static bool OpenProcessIfNotOpend (string Path, string Args = "") {
             string _processName = System.IO.Path.GetFileNameWithoutExtension (Path);
-            if (WinAPI.FindProcess (_processName) != default (Process)) return;
+            if (WinAPI.FindProcess (_processName) != default (Process)) return false;
 
-            OpenProcess (Path, Args);
-        }
-
-        // 守护进程
-        public static void DaemonProcess (string Path, string Args = "") {
-            string _processName = Path;
-            if (System.IO.Path.IsPathRooted (Path)) {
-                // 如果进程未打开则打开该程序
-                OpenProcessIfNotOpend (Path, Args);
-                _processName = System.IO.Path.GetFileNameWithoutExtension (Path);
-            }
-
-            var _process = WinAPI.FindProcess (_processName);
-            if (_process == default (Process)) return;
-
-            // 如果程序挂起 则关闭进程
-            if (WinAPI.IsHungAppWindow (_process.MainWindowHandle)) {
-                _process.Kill ();
-                return;
-            }
-
-            // 保持窗口置顶
-            KeepTopWindow (_processName);
+            return OpenProcess (Path, Args);
         }
 
         // 窗口是否最大化
@@ -142,10 +109,10 @@ namespace DNHper {
         );
 
         [DllImport ("user32.dll", EntryPoint = "GetWindowLong", CharSet = CharSet.Auto)]
-        public static extern int GetWindowLong (IntPtr hWnd, int nIndex);
+        public static extern UInt32 GetWindowLong (IntPtr hWnd, int nIndex);
 
-        [DllImport ("user32.dll", EntryPoint = "SetWindowLong", CharSet = CharSet.Auto)]
-        public static extern int SetWindowLong (IntPtr hWnd, int nIndex, long dwNewLong);
+        [DllImport ("user32.dll", EntryPoint = "SetWindowLongA", CharSet = CharSet.Auto)]
+        public static extern int SetWindowLong (IntPtr hWnd, int nIndex, UInt32 dwNewLong);
 
         [DllImport ("user32.dll", CharSet = CharSet.Auto)]
         public static extern int SetWindowPos (IntPtr hWnd, int hWndInsertAfter, int x, int y, int Width, int Height, SetWindowPosFlags flags);

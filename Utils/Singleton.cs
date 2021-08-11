@@ -1,5 +1,4 @@
-﻿using UnityEngine;
-using System;
+﻿using System;
 using System.Collections;
 using System.Collections.Generic;
 
@@ -41,23 +40,23 @@ namespace DNHper
         }
     }
 
-    public class SingletonBehaviour<T> : MonoBehaviour where T:MonoBehaviour
-    {
-        private static T instance;
-        public static T Instance
-        {
-            get
-            {
-                if(instance==null)
-                {
-                    instance = FindObjectOfType(typeof(T)) as T;
-                }
-                return instance;
-            }
-        }
+    //public class SingletonBehaviour<T> : MonoBehaviour where T:MonoBehaviour
+    //{
+    //    private static T instance;
+    //    public static T Instance
+    //    {
+    //        get
+    //        {
+    //            if(instance==null)
+    //            {
+    //                instance = FindObjectOfType(typeof(T)) as T;
+    //            }
+    //            return instance;
+    //        }
+    //    }
 
-        private void OnDestroy() {
+    //    private void OnDestroy() {
             
-        }
-    }
+    //    }
+    //}
 }
