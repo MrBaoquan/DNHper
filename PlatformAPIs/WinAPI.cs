@@ -37,17 +37,20 @@ namespace DNHper {
             return Process.GetProcesses ().ToList ().Where (_process => _process.ProcessName == ProcessName).FirstOrDefault ();
         }
 
-
-        public static bool OpenProcess (string Path, string Args = "") {
-            Process.Start (Path, Args);
-            return true;
+        public static bool OpenProcess (string Path, string Args = "", bool runas = false) {
+            Process _process = new Process ();
+            _process.StartInfo.FileName = Path;
+            if (runas)
+                _process.StartInfo.Verb = "runas";
+            _process.StartInfo.Arguments = Args;
+            return _process.Start ();
         }
 
-        public static bool OpenProcessIfNotOpend (string Path, string Args = "") {
+        public static bool OpenProcessIfNotOpend (string Path, string Args = "", bool runas = false) {
             string _processName = System.IO.Path.GetFileNameWithoutExtension (Path);
             if (WinAPI.FindProcess (_processName) != default (Process)) return false;
 
-            return OpenProcess (Path, Args);
+            return OpenProcess (Path, Args, runas);
         }
 
         // 窗口是否最大化
@@ -151,11 +154,13 @@ namespace DNHper {
         public const int MOUSEEVENTF_RIGHTUP = 0x10;
     }
 
-    public enum WindowType {
+    public enum CMDShow {
         SW_HIDE = 0,
-        SW_SHOWRESTORE = 1,
+        SW_SHOWNORMAL = 1,
+        SW_NORMAL = SW_SHOWNORMAL,
         SW_SHOWMINIMIZED = 2,
         SW_SHOWMAXIMIZED = 3, //最大化  
+        SW_SHOW = 5
     }
 
     public enum HWndInsertAfter {
