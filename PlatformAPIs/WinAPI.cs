@@ -33,8 +33,20 @@ namespace DNHper {
             }
         }
 
-        public static Process FindProcess (string ProcessName) {
-            return Process.GetProcesses ().ToList ().Where (_process => _process.ProcessName == ProcessName).FirstOrDefault ();
+        public static Process FindProcess (string ProcessFileName) {
+            try {
+                if (Path.IsPathRooted (ProcessFileName)) {
+                    return Process
+                        .GetProcessesByName (Path.GetFileNameWithoutExtension (ProcessFileName)).ToList ().Where (_process =>
+                            _process.GetMainModuleFileName () == ProcessFileName
+                        ).FirstOrDefault ();
+                }
+                return Process.GetProcesses ().ToList ().Where (_process => _process.ProcessName == ProcessFileName).FirstOrDefault ();
+            } catch (System.Exception e) {
+                Console.WriteLine (e.Message);
+                return default (Process);
+            }
+
         }
 
         public static bool OpenProcess (string Path, string Args = "", bool runas = false) {
@@ -47,9 +59,7 @@ namespace DNHper {
         }
 
         public static bool OpenProcessIfNotOpend (string Path, string Args = "", bool runas = false) {
-            string _processName = System.IO.Path.GetFileNameWithoutExtension (Path);
-            if (WinAPI.FindProcess (_processName) != default (Process)) return false;
-
+            if (WinAPI.FindProcess (Path) != default (Process)) return false;
             return OpenProcess (Path, Args, runas);
         }
 
@@ -58,7 +68,7 @@ namespace DNHper {
         [
             return :MarshalAs (UnmanagedType.Bool)
         ]
-        static extern bool IsIconic (IntPtr hWnd);
+        public static extern bool IsIconic (IntPtr hWnd);
 
         // 窗口是否最小化
 
@@ -66,7 +76,7 @@ namespace DNHper {
         [
             return :MarshalAs (UnmanagedType.Bool)
         ]
-        static extern bool IsZoomed (IntPtr hWnd);
+        public static extern bool IsZoomed (IntPtr hWnd);
 
         // 操作窗口
         [DllImport ("user32.dll")]
@@ -96,7 +106,7 @@ namespace DNHper {
         ]
         public static extern bool IsHungAppWindow (IntPtr hWnd);
 
-        // 鼠标时间模拟
+        // 鼠标事件模拟
         [DllImport ("user32.dll", EntryPoint = "mouse_event")]
         public static extern void mouse_event (
 
@@ -139,6 +149,14 @@ namespace DNHper {
 
         [System.Runtime.InteropServices.DllImport ("user32.dll", EntryPoint = "ShowCursor")]
         public extern static bool ShowCursor (bool bShow);
+
+        // Registers a hot key with Windows.
+        [DllImport ("user32.dll")]
+        public static extern bool RegisterHotKey (IntPtr hWnd, int id, uint fsModifiers, uint vk);
+        // Unregisters the hot key with Windows.
+        [DllImport ("user32.dll")]
+        public static extern bool UnregisterHotKey (IntPtr hWnd, int id);
+
         // 常量
         public const int MOUSEEVENTF_LEFTDOWN = 0x2;
         public const int MOUSEEVENTF_LEFTUP = 0x4;
@@ -160,7 +178,8 @@ namespace DNHper {
         SW_NORMAL = SW_SHOWNORMAL,
         SW_SHOWMINIMIZED = 2,
         SW_SHOWMAXIMIZED = 3, //最大化  
-        SW_SHOW = 5
+        SW_SHOW = 5,
+        SW_RESTORE = 9
     }
 
     public enum HWndInsertAfter {
@@ -424,6 +443,17 @@ namespace DNHper {
         GWL_STYLE = -16,
         GWL_USERDATA = -21,
         GWL_WNDPROC = -4
+    }
+
+    // 热键相关
+    //定义了辅助键的名称（将数字转变为字符以便于记忆，也可去除此枚举而直接使用数值）
+    [Flags ()]
+    public enum KeyModifiers {
+        None = 0,
+        Alt = 1,
+        Ctrl = 2,
+        Shift = 4,
+        WindowsKey = 8
     }
 
 }
