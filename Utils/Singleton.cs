@@ -13,50 +13,25 @@ using System.Collections.Generic;
  * Copyright 2019 - 2019 mrma617@gmail.com
  */
 
-namespace DNHper
-{
-    public class Singleton<T> where T : new()
-    {
+namespace DNHper {
+    public class Singleton<T> where T : new () {
         /*	Instance	*/
         private static T instance;
 
-        static Singleton(){}
+        static Singleton () { }
 
-        public static T Instance
-        {
-            get
-            {
-                if(instance == null)
-                {
-                    instance = new T();
+        public static T Instance {
+            get {
+                if (instance == null) {
+                    instance = new T ();
                 }
                 return instance;
             }
         }
-        
-        public static void Destroy()
-        {
-            instance = default(T);
+
+        public static void Destroy () {
+            instance = default (T);
         }
     }
 
-    //public class SingletonBehaviour<T> : MonoBehaviour where T:MonoBehaviour
-    //{
-    //    private static T instance;
-    //    public static T Instance
-    //    {
-    //        get
-    //        {
-    //            if(instance==null)
-    //            {
-    //                instance = FindObjectOfType(typeof(T)) as T;
-    //            }
-    //            return instance;
-    //        }
-    //    }
-
-    //    private void OnDestroy() {
-            
-    //    }
-    //}
 }
