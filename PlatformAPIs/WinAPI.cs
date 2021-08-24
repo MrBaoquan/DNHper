@@ -50,12 +50,16 @@ namespace DNHper {
         }
 
         public static bool OpenProcess (string Path, string Args = "", bool runas = false) {
-            Process _process = new Process ();
-            _process.StartInfo.FileName = Path;
-            if (runas)
-                _process.StartInfo.Verb = "runas";
-            _process.StartInfo.Arguments = Args;
-            return _process.Start ();
+            try {
+                Process _process = new Process ();
+                _process.StartInfo.FileName = Path;
+                if (runas)
+                    _process.StartInfo.Verb = "runas";
+                _process.StartInfo.Arguments = Args;
+                return _process.Start ();
+            } catch (System.Exception e) {
+                return false;
+            }
         }
 
         public static bool OpenProcessIfNotOpend (string Path, string Args = "", bool runas = false) {

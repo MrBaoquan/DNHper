@@ -3,11 +3,15 @@ using System.Security.Cryptography;
 using System.Text;
 namespace DNHper {
     public static class ParserExtension {
-        public static float Parse2Float (this string _value) {
+        public static float Parse2Float (this string _value, float InDefault = 0.0f) {
             if (_value == string.Empty) {
                 return 0f;
             }
-            return float.Parse (_value);
+            float _result = -1;
+            if (float.TryParse (_value, out _result)) {
+                return _result;
+            }
+            return InDefault;
         }
 
         public static int Parse2Int (this string _value) {
