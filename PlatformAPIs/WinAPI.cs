@@ -57,7 +57,7 @@ namespace DNHper {
                     _process.StartInfo.Verb = "runas";
                 _process.StartInfo.Arguments = Args;
                 return _process.Start ();
-            } catch (System.Exception e) {
+            } catch (System.Exception) {
                 return false;
             }
         }
