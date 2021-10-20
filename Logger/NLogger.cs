@@ -87,7 +87,7 @@ namespace DNHper {
             config.AddRule (LogLevel.Trace, LogLevel.Fatal, logfile);
 
             var _memoryTarget = new NLog.Targets.MemoryTarget ("memoryTarget");
-            _memoryTarget.Layout = "${longdate} ${level} ${message} ${exception:format=Message} ${exception:format=StackTrace:exceptionDataSeparator=\r\n}";
+            _memoryTarget.Layout = "${longdate} [${level}]: ${message} ${exception:format=Message} ${exception:format=StackTrace:exceptionDataSeparator=\r\n}";
             config.AddRule (LogLevel.Trace, LogLevel.Fatal, _memoryTarget);
             NLog.LogManager.Configuration = config;
         }

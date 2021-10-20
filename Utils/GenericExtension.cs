@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -24,6 +25,8 @@ namespace DNHper {
         }
 
         public static IEnumerable < (T item, int index) > WithIndex<T> (this IEnumerable<T> self) => self.Select ((item, index) => (item, index));
+
+        public static IEnumerable<T> Flatten<T> (this IEnumerable<T> e, Func<T, IEnumerable<T>> f) => e.SelectMany (c => f (c).Flatten (f)).Concat (e);
 
     }
 

@@ -67,6 +67,10 @@ namespace DNHper {
             return OpenProcess (Path, Args, runas);
         }
 
+        public static bool ProcessExists (string ProcessFileName) {
+            return WinAPI.FindProcess (ProcessFileName) != default (Process);
+        }
+
         // 窗口是否最大化
         [DllImport ("user32.dll")]
         [
