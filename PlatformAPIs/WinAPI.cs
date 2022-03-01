@@ -49,10 +49,11 @@ namespace DNHper {
 
         }
 
-        public static bool OpenProcess (string Path, string Args = "", bool runas = false) {
+        public static bool OpenProcess (string Path, string Args = "", bool runas = false, bool noWindow = false) {
             try {
                 Process _process = new Process ();
                 _process.StartInfo.FileName = Path;
+                _process.StartInfo.CreateNoWindow = noWindow;
                 if (runas)
                     _process.StartInfo.Verb = "runas";
                 _process.StartInfo.Arguments = Args;
@@ -164,6 +165,12 @@ namespace DNHper {
         // Unregisters the hot key with Windows.
         [DllImport ("user32.dll")]
         public static extern bool UnregisterHotKey (IntPtr hWnd, int id);
+
+        [DllImport ("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
+        public extern static bool ShutdownBlockReasonCreate ([In] IntPtr hWnd, [In] string pwszReason);
+
+        [DllImport ("user32.dll", SetLastError = true)]
+        public extern static bool ShutdownBlockReasonDestroy ([In] IntPtr hWnd);
 
         // 常量
         public const int MOUSEEVENTF_LEFTDOWN = 0x2;
