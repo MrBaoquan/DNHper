@@ -1,2 +1,3 @@
 *.meta
 !DNHper.asmdef.meta
+Applications/*.exe

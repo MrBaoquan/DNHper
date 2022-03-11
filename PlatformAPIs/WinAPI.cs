@@ -131,7 +131,7 @@ namespace DNHper {
         );
 
         [DllImport ("user32.dll", EntryPoint = "GetWindowLong", CharSet = CharSet.Auto)]
-        public static extern UInt32 GetWindowLong (IntPtr hWnd, int nIndex);
+        public static extern int GetWindowLong (IntPtr hWnd, int nIndex);
 
         [DllImport ("user32.dll", EntryPoint = "SetWindowLongA", CharSet = CharSet.Auto)]
         public static extern int SetWindowLong (IntPtr hWnd, int nIndex, UInt32 dwNewLong);
@@ -142,6 +142,10 @@ namespace DNHper {
         public static IntPtr CurrentWindow () {
             string _process = Process.GetCurrentProcess ().ProcessName;
             return FindWindow (null, _process);
+        }
+
+        public static bool IsWindowTopMost (IntPtr hWnd) {
+            return (GetWindowLong (hWnd, -20) & 0x80000) == 0x80000;
         }
 
         // public const int GWL_STYLE = (-16);
