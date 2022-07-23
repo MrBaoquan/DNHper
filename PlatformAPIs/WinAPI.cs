@@ -136,6 +136,16 @@ namespace DNHper {
         [DllImport ("user32.dll", EntryPoint = "SetWindowLongA", CharSet = CharSet.Auto)]
         public static extern int SetWindowLong (IntPtr hWnd, int nIndex, UInt32 dwNewLong);
 
+        public struct MARGINS {
+            public int cxLeftWidth;
+            public int cxRightWidth;
+            public int cyTopHeight;
+            public int cyBottomHeight;
+        }
+
+        [DllImport ("Dwmapi.dll")]
+        public static extern uint DwmExtendFrameIntoClientArea (IntPtr hWnd, ref MARGINS margins);
+
         [DllImport ("user32.dll", CharSet = CharSet.Auto)]
         public static extern int SetWindowPos (IntPtr hWnd, int hWndInsertAfter, int x, int y, int Width, int Height, SetWindowPosFlags flags);
 
