@@ -37,11 +37,14 @@ namespace DNHper {
             try {
                 if (Path.IsPathRooted (ProcessFileName)) {
                     return Process
-                        .GetProcessesByName (Path.GetFileNameWithoutExtension (ProcessFileName)).ToList ().Where (_process =>
+                        .GetProcessesByName (Path.GetFileNameWithoutExtension (ProcessFileName))
+                        .ToList ()
+                        .Where (_process =>
                             _process.GetMainModuleFileName () == ProcessFileName
                         ).FirstOrDefault ();
                 }
-                return Process.GetProcesses ().ToList ().Where (_process => _process.ProcessName == ProcessFileName).FirstOrDefault ();
+                var _processes = Process.GetProcesses ().ToList ();
+                return _processes.Where (_process => _process.ProcessName.ToUpper () == ProcessFileName.ToUpper ()).FirstOrDefault ();
             } catch (System.Exception e) {
                 Console.WriteLine (e.Message);
                 return default (Process);
@@ -102,6 +105,9 @@ namespace DNHper {
         //激活指定窗口
         [DllImport ("user32.dll")]
         public static extern bool SetForegroundWindow (IntPtr hWnd);
+
+        [DllImport ("user32.dll")]
+        public static extern IntPtr SetFocus (IntPtr hWnd);
 
         [DllImport ("user32.dll")]
         public static extern IntPtr FindWindow (string lpClassName, string lpWindowName);
