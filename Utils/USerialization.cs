@@ -11,6 +11,7 @@ namespace DNHper {
             serializer.Serialize (writer.BaseStream, item);
             writer.Close ();
         }
+
         public static T DeserializeXML<T> (string path) where T : class {
             if (!File.Exists (path)) return default (T);
             XmlSerializer serializer = new XmlSerializer (typeof (T));
