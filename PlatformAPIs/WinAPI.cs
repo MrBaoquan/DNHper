@@ -53,10 +53,12 @@ namespace DNHper {
         }
 
         public static bool OpenProcess (string Path, string Args = "", bool runas = false, bool noWindow = false) {
+            if (System.IO.Path.GetExtension (Path) != ".exe") return false;
             try {
                 Process _process = new Process ();
                 _process.StartInfo.FileName = Path;
                 _process.StartInfo.CreateNoWindow = noWindow;
+                _process.StartInfo.WorkingDirectory = System.IO.Path.GetDirectoryName (Path);
                 if (runas)
                     _process.StartInfo.Verb = "runas";
                 _process.StartInfo.Arguments = Args;
