@@ -21,10 +21,6 @@ namespace DNHper {
             return int.Parse (_value);
         }
 
-        public static byte[] ToBytes (this string _value) {
-            return System.Text.Encoding.ASCII.GetBytes (_value);
-        }
-
         public static string ToMD5 (this string _value) {
             using (var _cryptoMD5 = MD5.Create ()) {
                 var _bytes = Encoding.UTF8.GetBytes (_value);
