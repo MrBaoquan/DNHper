@@ -21,6 +21,11 @@ namespace DNHper {
             return int.Parse (_value);
         }
 
+        public static bool Parse2Boolean (this string _value) {
+            if (_value == string.Empty) return false;
+            return Boolean.Parse (_value);
+        }
+
         public static string ToMD5 (this string _value) {
             using (var _cryptoMD5 = MD5.Create ()) {
                 var _bytes = Encoding.UTF8.GetBytes (_value);
