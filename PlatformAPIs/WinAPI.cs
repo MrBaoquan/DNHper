@@ -53,7 +53,7 @@ namespace DNHper {
         }
 
         public static bool OpenProcess (string Path, string Args = "", bool runas = false, bool noWindow = false) {
-            if (System.IO.Path.GetExtension (Path) != ".exe") return false;
+            if (!CheckValidExecutableFile (Path)) return false;
             try {
                 Process _process = new Process ();
                 _process.StartInfo.FileName = Path;
@@ -68,9 +68,24 @@ namespace DNHper {
             }
         }
 
-        public static bool OpenProcessIfNotOpend (string Path, string Args = "", bool runas = false) {
+        public static bool OpenProcess (string Path, ProcessStartInfo startInfo) {
+            if (!CheckValidExecutableFile (Path)) return false;
+            try {
+                Process _process = new Process ();
+                _process.StartInfo = startInfo;
+                return _process.Start ();
+            } catch (System.Exception) {
+                return false;
+            }
+        }
+
+        public static bool CheckValidExecutableFile (string path) {
+            return new List<string> { ".exe", ".bat" }.Contains (System.IO.Path.GetExtension (path));
+        }
+
+        public static bool OpenProcessIfNotOpend (string Path, ProcessStartInfo startInfo) {
             if (WinAPI.FindProcess (Path) != default (Process)) return false;
-            return OpenProcess (Path, Args, runas);
+            return OpenProcess (Path, startInfo);
         }
 
         public static bool ProcessExists (string ProcessFileName) {
