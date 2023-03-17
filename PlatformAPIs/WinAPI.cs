@@ -34,6 +34,10 @@ namespace DNHper {
         }
 
         public static Process FindProcess (string ProcessFileName) {
+            return FindProcesses (ProcessFileName).FirstOrDefault ();
+        }
+
+        public static List<Process> FindProcesses (string ProcessFileName) {
             try {
                 if (Path.IsPathRooted (ProcessFileName)) {
                     return Process
@@ -41,15 +45,18 @@ namespace DNHper {
                         .ToList ()
                         .Where (_process =>
                             _process.GetMainModuleFileName () == ProcessFileName
-                        ).FirstOrDefault ();
+                        ).ToList ();
                 }
                 var _processes = Process.GetProcesses ().ToList ();
-                return _processes.Where (_process => _process.ProcessName.ToUpper () == ProcessFileName.ToUpper ()).FirstOrDefault ();
+                return _processes.Where (_process => _process.ProcessName.ToUpper () == ProcessFileName.ToUpper ()).ToList ();
             } catch (System.Exception e) {
                 Console.WriteLine (e.Message);
-                return default (Process);
+                return new List<Process> ();
             }
+        }
 
+        public static void KillProcesses (string ProcessFileName) {
+            FindProcesses (ProcessFileName).ForEach (_process => _process.Kill ());
         }
 
         public static bool OpenProcess (string Path, string Args = "", bool runas = false, bool noWindow = false) {
@@ -80,7 +87,7 @@ namespace DNHper {
         }
 
         public static bool CheckValidExecutableFile (string path) {
-            return new List<string> { ".exe", ".bat" }.Contains (System.IO.Path.GetExtension (path));
+            return new List<string> { ".exe", ".bat", ".cmd", ".txt" }.Contains (System.IO.Path.GetExtension (path));
         }
 
         public static bool OpenProcessIfNotOpend (string Path, ProcessStartInfo startInfo) {
@@ -192,6 +199,12 @@ namespace DNHper {
 
         [DllImport ("User32")]
         public extern static void SetCursorPos (int x, int y);
+
+        [DllImport ("user32.dll", SetLastError = true)]
+        public static extern int SendMessage (IntPtr hWnd, int Msg, int wParam, StringBuilder lParam);
+
+        [DllImport ("user32.dll", SetLastError = true)]
+        public static extern IntPtr PostMessage (IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam);
 
         [System.Runtime.InteropServices.DllImport ("user32.dll", EntryPoint = "ShowCursor")]
         public extern static bool ShowCursor (bool bShow);
