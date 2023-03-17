@@ -101,7 +101,7 @@ namespace DNHper {
             return _messages;
         }
 
-        public static void Uninitialize () {
+        public static void Shutdown () {
             NLog.LogManager.Shutdown ();
         }
 
