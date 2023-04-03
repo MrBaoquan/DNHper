@@ -1,46 +1,56 @@
 using System;
 using System.Linq;
 using System.Runtime.InteropServices;
-namespace DNHper {
 
-    public static class UConverter {
-
-        public static T ByteArray2Struct<T> (this byte[] InData) where T : struct {
+namespace DNHper
+{
+    public static class UConverter
+    {
+        public static T ByteArray2Struct<T>(this byte[] InData)
+            where T : struct
+        {
             T _instance;
-            GCHandle handle = GCHandle.Alloc (InData, GCHandleType.Pinned);
-            try {
-                _instance = (T) Marshal.PtrToStructure (handle.AddrOfPinnedObject (), typeof (T));
-            } finally {
-                handle.Free ();
+            GCHandle handle = GCHandle.Alloc(InData, GCHandleType.Pinned);
+            try
+            {
+                _instance = (T)Marshal.PtrToStructure(handle.AddrOfPinnedObject(), typeof(T));
+            }
+            finally
+            {
+                handle.Free();
             }
             return _instance;
         }
 
-        public static byte[] ToBytes (this string _value) {
-            return System.Text.Encoding.ASCII.GetBytes (_value);
+        public static byte[] ToBytes(this string _value)
+        {
+            return System.Text.Encoding.ASCII.GetBytes(_value);
         }
 
-        public static byte[] ToHexBytes (this string _value, char Split = ' ') {
-            return _value.Split (Split).Select (_hex => Convert.ToByte (_hex, 16)).ToArray ();
+        public static byte[] ToHexBytes(this string _value, char Split = ' ')
+        {
+            return _value.Split(Split).Select(_hex => Convert.ToByte(_hex, 16)).ToArray();
         }
 
-        public static string ToHexString (this byte[] InData, bool bWithDash = true) {
-            var _hexString = BitConverter.ToString (InData);
-            if (!bWithDash) {
-                _hexString = _hexString.Replace ("-", string.Empty);
+        public static string ToHexString(this byte[] InData, bool bWithDash = true)
+        {
+            var _hexString = BitConverter.ToString(InData);
+            if (!bWithDash)
+            {
+                _hexString = _hexString.Replace("-", string.Empty);
             }
             return _hexString;
         }
 
-        public static void BGR2RGB (ref byte[] buffer) {
+        public static void BGR2RGB(ref byte[] buffer)
+        {
             byte swap;
-            for (int i = 0; i < buffer.Length; i = i + 3) {
+            for (int i = 0; i < buffer.Length; i = i + 3)
+            {
                 swap = buffer[i];
                 buffer[i] = buffer[i + 2];
                 buffer[i + 2] = swap;
             }
         }
-
     }
-
 }
