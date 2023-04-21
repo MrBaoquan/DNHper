@@ -58,5 +58,10 @@ namespace DNHper
 
             return String.Format("{0:0.##} {1}", dblSByte, Suffix[i]);
         }
+
+        public static string ToForwardSlash(this string str)
+        {
+            return str.Replace('\\', '/');
+        }
     }
 }
