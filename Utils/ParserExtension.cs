@@ -63,5 +63,10 @@ namespace DNHper
         {
             return str.Replace('\\', '/');
         }
+
+        public static string ToBackSlash(this string str)
+        {
+            return str.Replace('/', '\\');
+        }
     }
 }
