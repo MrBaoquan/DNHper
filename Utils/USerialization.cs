@@ -11,7 +11,11 @@ namespace DNHper
         {
             XmlSerializer serializer = new XmlSerializer(item.GetType());
             StreamWriter writer = new StreamWriter(path);
-            serializer.Serialize(writer.BaseStream, item);
+
+            // serialize without namespace
+            XmlSerializerNamespaces ns = new XmlSerializerNamespaces();
+            ns.Add("", "");
+            serializer.Serialize(writer.BaseStream, item, ns);
             writer.Close();
         }
 

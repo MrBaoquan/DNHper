@@ -52,5 +52,11 @@ namespace DNHper
                 buffer[i + 2] = swap;
             }
         }
+
+        public static string ToChineseNumber(this int _number)
+        {
+            string[] _chineseNumber = new string[] { "零", "一", "二", "三", "四", "五", "六", "七", "八" };
+            return _chineseNumber[_number];
+        }
     }
 }

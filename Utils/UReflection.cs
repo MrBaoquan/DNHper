@@ -24,6 +24,25 @@ namespace DNHper
             }
         }
 
+        public static T GetPrivateField<T>(object InTarget, string InField)
+        {
+            try
+            {
+                Type _class = InTarget.GetType();
+                FieldInfo _fieldInfo = _class.GetField(
+                    InField,
+                    BindingFlags.NonPublic | BindingFlags.Instance
+                );
+                return (T)_fieldInfo.GetValue(InTarget);
+            }
+            catch (System.Exception ex)
+            {
+                NLogger.Warn(InField);
+                NLogger.Error(ex);
+            }
+            return default(T);
+        }
+
         public static bool SetFieldValue<T>(object InObject, string InField, T Value)
         {
             try
@@ -70,7 +89,7 @@ namespace DNHper
                 var _methodInfo = InTarget
                     .GetType()
                     .GetMethod(InMethodName, BindingFlags.NonPublic | BindingFlags.Instance);
-                return _methodInfo.Invoke(InTarget, InParams);
+                return _methodInfo?.Invoke(InTarget, InParams);
             }
             catch (System.Exception ex)
             {
