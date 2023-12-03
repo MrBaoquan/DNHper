@@ -20,13 +20,13 @@ namespace DNHper
             return InDefault;
         }
 
-        public static int Parse2Int(this string _value)
+        public static int Parse2Int(this string _value, int Default = 0)
         {
-            if (_value == string.Empty)
+            if (int.TryParse(_value, out int _result))
             {
-                return 0;
+                return _result;
             }
-            return int.Parse(_value);
+            return Default;
         }
 
         public static bool Parse2Boolean(this string _value)
