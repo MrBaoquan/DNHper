@@ -89,7 +89,7 @@ namespace DNHper
                 var _methodInfo = InTarget
                     .GetType()
                     .GetMethod(InMethodName, BindingFlags.NonPublic | BindingFlags.Instance);
-                return _methodInfo.Invoke(InTarget, InParams);
+                return _methodInfo?.Invoke(InTarget, InParams);
             }
             catch (System.Exception ex)
             {

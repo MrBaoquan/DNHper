@@ -1,6 +1,7 @@
 using System.IO;
 using System.Runtime.Serialization;
 using System.Runtime.Serialization.Formatters.Binary;
+using System.Xml;
 using System.Xml.Serialization;
 
 namespace DNHper
@@ -11,7 +12,13 @@ namespace DNHper
         {
             XmlSerializer serializer = new XmlSerializer(item.GetType());
             StreamWriter writer = new StreamWriter(path);
-            serializer.Serialize(writer.BaseStream, item);
+
+            serializer.Serialize(
+                writer.BaseStream,
+                item,
+                new XmlSerializerNamespaces(new[] { XmlQualifiedName.Empty })
+            );
+
             writer.Close();
         }
 
