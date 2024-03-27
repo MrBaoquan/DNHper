@@ -14,6 +14,22 @@ namespace DNHper
             return _newArr.ToList();
         }
 
+        public static List<T> Shuffle<T>(this IList<T> list)
+        {
+            Random rng = new Random();
+            List<T> shuffledList = new List<T>(list);
+            int n = shuffledList.Count;
+            while (n > 1)
+            {
+                n--;
+                int k = rng.Next(n + 1);
+                T value = shuffledList[k];
+                shuffledList[k] = shuffledList[n];
+                shuffledList[n] = value;
+            }
+            return shuffledList;
+        }
+
         public static string ToLogString<T>(this List<T> InList)
         {
             if (InList.Count <= 0)
