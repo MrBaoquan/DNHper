@@ -1,11 +1,13 @@
 using System;
 using System.IO;
-using System.Reactive.Disposables;
-using System.Reactive.Linq;
 using System.Threading;
 
 namespace DNHper
 {
+    using System.Reactive.Disposables;
+    using System.Reactive.Linq;
+
+#if NETSTANDARD
     public static class IOManger
     {
         public static IObservable<(string filename, int copied, int total)> CopyDir(
@@ -55,4 +57,5 @@ namespace DNHper
             });
         }
     }
+#endif
 }
