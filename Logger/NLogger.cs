@@ -95,35 +95,41 @@ namespace DNHper
         public static void Initialize()
         {
             var config = new NLog.Config.LoggingConfiguration();
-            var logfile = new NLog.Targets.FileTarget("logfile") { FileName = LogFilePath };
-            logfile.ArchiveNumbering = NLog.Targets.ArchiveNumberingMode.DateAndSequence;
-            logfile.ArchiveFileName = Path.Combine(LogFileDir, "backup-{#}.log");
-            logfile.MaxArchiveFiles = 10;
-            logfile.ArchiveEvery = NLog.Targets.FileArchivePeriod.Day;
-            logfile.Layout =
-                "${longdate} ${level} ${message} ${exception:format=Message} ${exception:format=StackTrace:exceptionDataSeparator=\r\n}";
+            var logfile = new NLog.Targets.FileTarget("logfile")
+            {
+                FileName = LogFilePath,
+                ArchiveNumbering = NLog.Targets.ArchiveNumberingMode.DateAndSequence,
+                ArchiveFileName = Path.Combine(LogFileDir, "backup-{#}.log"),
+                MaxArchiveFiles = 10,
+                ArchiveEvery = NLog.Targets.FileArchivePeriod.Day,
+                Layout = "${longdate} [${level}] ${message} ${exception:format=ToString} "
+            };
+
             config.AddRule(LogLevel.Trace, LogLevel.Fatal, logfile);
 
-            var _memoryTarget = new NLog.Targets.MemoryTarget("memoryTarget");
-            _memoryTarget.Layout =
-                "${longdate} [${level}]: ${message} ${exception:format=Message} ${exception:format=StackTrace:exceptionDataSeparator=\r\n}";
-            config.AddRule(LogLevel.Trace, LogLevel.Fatal, _memoryTarget);
-            NLog.LogManager.Configuration = config;
+            // var _memoryTarget = new NLog.Targets.MemoryTarget("memoryTarget")
+            // {
+            //     Layout =
+            //         "${longdate} [${level}]: ${message} ${exception:format=Message} ${exception:format=StackTrace:exceptionDataSeparator=\r\n}"
+            // };
+
+            // config.AddRule(LogLevel.Trace, LogLevel.Fatal, _memoryTarget);
+            LogManager.Configuration = config;
         }
 
-        public static List<string> FetchMessage(int MsgCount = -1)
-        {
-            var _memoryTarget =
-                LogManager.Configuration.FindTargetByName<NLog.Targets.MemoryTarget>(
-                    "memoryTarget"
-                );
-            var _messages = _memoryTarget.Logs.ToList();
-            if (MsgCount > 0)
-            {
-                return _messages.Skip(Math.Max(_messages.Count - MsgCount, 0)).ToList();
-            }
-            return _messages;
-        }
+        // public static List<string> FetchMessage(int MsgCount = -1)
+        // {
+        //     var _memoryTarget =
+        //         LogManager.Configuration.FindTargetByName<NLog.Targets.MemoryTarget>(
+        //             "memoryTarget"
+        //         );
+        //     var _messages = _memoryTarget.Logs.ToList();
+        //     if (MsgCount > 0)
+        //     {
+        //         return _messages.Skip(Math.Max(_messages.Count - MsgCount, 0)).ToList();
+        //     }
+        //     return _messages;
+        // }
 
         public static void Shutdown()
         {
