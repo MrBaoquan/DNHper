@@ -9,17 +9,12 @@ namespace DNHper
     public static class NLogger
     {
         const string configName = "NLog.config.xml";
-        const string logFileName = "${shortdate}.log";
+        public static string LogFileName { get; set; } = "${shortdate}.log";
+        public static string LogFileDir { get; set; } = string.Empty;
 
-        private static string logFileDir = string.Empty;
-        public static string LogFileDir
-        {
-            get { return logFileDir; }
-            set { logFileDir = value; }
-        }
         static string LogFilePath
         {
-            get { return Path.Combine(LogFileDir, logFileName); }
+            get { return Path.Combine(LogFileDir, LogFileName); }
         }
 
         static NLogger() { }
@@ -94,27 +89,37 @@ namespace DNHper
 
         public static void Initialize()
         {
+            Archive();
             var config = new NLog.Config.LoggingConfiguration();
             var logfile = new NLog.Targets.FileTarget("logfile")
             {
                 FileName = LogFilePath,
-                ArchiveNumbering = NLog.Targets.ArchiveNumberingMode.DateAndSequence,
-                ArchiveFileName = Path.Combine(LogFileDir, "backup-{#}.log"),
+                ArchiveNumbering = NLog.Targets.ArchiveNumberingMode.Date,
+                ArchiveFileName = Path.Combine(
+                    LogFileDir,
+                    "Player-${date:format=yyyy.MM.dd-HH.mm.ss}.log"
+                ),
                 MaxArchiveFiles = 10,
                 ArchiveEvery = NLog.Targets.FileArchivePeriod.Day,
                 Layout = "${longdate} [${level}] ${message} ${exception:format=ToString} "
             };
 
             config.AddRule(LogLevel.Trace, LogLevel.Fatal, logfile);
-
-            // var _memoryTarget = new NLog.Targets.MemoryTarget("memoryTarget")
-            // {
-            //     Layout =
-            //         "${longdate} [${level}]: ${message} ${exception:format=Message} ${exception:format=StackTrace:exceptionDataSeparator=\r\n}"
-            // };
-
-            // config.AddRule(LogLevel.Trace, LogLevel.Fatal, _memoryTarget);
             LogManager.Configuration = config;
+        }
+
+        // 手动归档
+        public static void Archive()
+        {
+            if (!File.Exists(LogFilePath))
+                return;
+
+            var archiveFilePath = Path.Combine(
+                LogFileDir,
+                "Player-" + DateTime.Now.ToString("yyyy.MM.dd-HH.mm.ss") + ".log"
+            );
+
+            File.Move(LogFilePath, archiveFilePath);
         }
 
         // public static List<string> FetchMessage(int MsgCount = -1)
