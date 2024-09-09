@@ -159,7 +159,7 @@ namespace DNHper
         [DllImport("user32.dll")]
         public static extern IntPtr SetFocus(IntPtr hWnd);
 
-        [DllImport("user32.dll")]
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
 
         [DllImport("kernel32.dll")]
@@ -179,10 +179,10 @@ namespace DNHper
             int dwExtraInfo
         );
 
-        [DllImport("user32.dll", EntryPoint = "GetWindowLong", CharSet = CharSet.Auto)]
+        [DllImport("user32.dll", EntryPoint = "GetWindowLongW", CharSet = CharSet.Unicode)]
         public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
 
-        [DllImport("user32.dll", EntryPoint = "SetWindowLongA", CharSet = CharSet.Auto)]
+        [DllImport("user32.dll", EntryPoint = "SetWindowLongW", CharSet = CharSet.Unicode)]
         public static extern int SetWindowLong(IntPtr hWnd, int nIndex, UInt32 dwNewLong);
 
         public struct MARGINS
@@ -196,7 +196,7 @@ namespace DNHper
         [DllImport("Dwmapi.dll")]
         public static extern uint DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
 
-        [DllImport("user32.dll", CharSet = CharSet.Auto)]
+        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
         public static extern int SetWindowPos(
             IntPtr hWnd,
             int hWndInsertAfter,
