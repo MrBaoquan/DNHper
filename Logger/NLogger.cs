@@ -24,7 +24,7 @@ namespace DNHper
 
         static NLogger() { }
 
-        private static NLog.Logger _logger = null;
+        private static NLog.Logger _logger;
         private static NLog.Logger logger
         {
             get

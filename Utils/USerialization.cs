@@ -4,6 +4,9 @@ using System.Runtime.Serialization.Formatters.Binary;
 using System.Xml;
 using System.Xml.Serialization;
 
+#pragma warning disable CS8600
+#pragma warning disable CS8603
+
 namespace DNHper
 {
     public static class USerialization

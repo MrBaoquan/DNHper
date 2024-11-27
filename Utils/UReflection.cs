@@ -3,6 +3,10 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Reflection;
 
+#pragma warning disable CS8600
+#pragma warning disable CS8602
+#pragma warning disable CS8603
+
 namespace DNHper
 {
     public static class UReflection
