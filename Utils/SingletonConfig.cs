@@ -10,12 +10,14 @@ namespace DNHper
     public class SingletonConfig<T> : Singleton<T> where T : class, new()
     {
         [XmlIgnore]
-        public string FilePath { get; private set; }
+        public string FilePath { get; private set; } = string.Empty;
 
         public T SetConfig(string _filePath)
         {
             FilePath = _filePath;
+#pragma warning disable CS8603 // 可能返回 null 引用。
             return this as T;
+#pragma warning restore CS8603 // 可能返回 null 引用。
         }
 
         public void Load()

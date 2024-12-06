@@ -160,7 +160,7 @@ namespace DNHper
         public static extern IntPtr SetFocus(IntPtr hWnd);
 
         [DllImport("user32.dll")]
-        public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
+        public static extern IntPtr FindWindow(string? lpClassName, string lpWindowName);
 
         [DllImport("kernel32.dll")]
         public static extern uint GetLastError();

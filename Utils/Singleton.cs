@@ -8,7 +8,7 @@ namespace DNHper
     public class Singleton<T> where T : class, new()
     {
         
-        private static T _instance;
+        private static T? _instance;
 
         private static readonly object _lock = new object();
         
