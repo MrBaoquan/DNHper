@@ -23,7 +23,7 @@ namespace DNHper
         }
 
         public static T DeserializeXML<T>(string path)
-            where T : class
+            where T : new()
         {
             if (!File.Exists(path))
                 return default(T);
