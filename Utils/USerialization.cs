@@ -1,8 +1,8 @@
+using System;
 using System.IO;
-using System.Runtime.Serialization;
-using System.Runtime.Serialization.Formatters.Binary;
-using System.Xml;
 using System.Xml.Serialization;
+using System.Xml;
+using MessagePack;
 
 namespace DNHper
 {
@@ -42,42 +42,37 @@ namespace DNHper
             }
         }
 
-        public static void SerializeObject(object Target, string InPath)
+        public static void SerializeObject(object target, string inPath)
         {
-            using (FileStream fileStream = new FileStream(InPath, FileMode.OpenOrCreate))
+            try
             {
-                BinaryFormatter _formatter = new BinaryFormatter();
-                try
-                {
-                    _formatter.Serialize(fileStream, Target);
-                }
-                catch (SerializationException _exc)
-                {
-                    NLogger.Error(_exc);
-                }
+                byte[] bytes = MessagePackSerializer.Serialize(target);
+                File.WriteAllBytes(inPath, bytes);
+            }
+            catch (Exception e)
+            {
+                NLogger.Error(e.Message);
             }
         }
 
-        public static T DeserializeObject<T>(string InPath)
+        public static T DeserializeObject<T>(string inPath)
             where T : class
         {
-            if (!File.Exists(InPath))
+            if (!File.Exists(inPath))
             {
-                NLogger.Warn("File {0} not exists.", InPath);
-                return default(T);
+                NLogger.Warn("File {0} not exists.", inPath);
+                return default;
             }
-            using (FileStream _fileStream = new FileStream(InPath, FileMode.Open))
+
+            try
             {
-                try
-                {
-                    BinaryFormatter _formatter = new BinaryFormatter();
-                    return _formatter.Deserialize(_fileStream) as T;
-                }
-                catch (SerializationException _exc)
-                {
-                    NLogger.Error(_exc);
-                    return default(T);
-                }
+                byte[] bytes = File.ReadAllBytes(inPath);
+                return MessagePackSerializer.Deserialize<T>(bytes);
+            }
+            catch (Exception e)
+            {
+                NLogger.Error(e.Message);
+                return default;
             }
         }
     }

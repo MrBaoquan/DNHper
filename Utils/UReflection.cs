@@ -38,7 +38,7 @@ namespace DNHper
             catch (System.Exception ex)
             {
                 NLogger.Warn(InField);
-                NLogger.Error(ex);
+                NLogger.Error(ex.Message);
             }
             return default(T);
         }
@@ -74,7 +74,7 @@ namespace DNHper
             }
             catch (System.Exception ex)
             {
-                NLogger.Error(ex);
+                NLogger.Error(ex.Message);
             }
         }
 
@@ -94,7 +94,7 @@ namespace DNHper
             catch (System.Exception ex)
             {
                 NLogger.Warn(InMethodName);
-                NLogger.Error(ex);
+                NLogger.Error(ex.Message);
             }
             return null;
         }
