@@ -10,7 +10,8 @@
         "System.Reactive.dll",
         "NLog.dll",
         "Newtonsoft.Json.dll",
-        ""
+        "MessagePack.dll",
+        "MessagePack.Annotations.dll"
     ],
     "autoReferenced": true,
     "defineConstraints": [],
