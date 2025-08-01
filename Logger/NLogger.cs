@@ -43,7 +43,7 @@ namespace DNHper
             var logfile = new NLog.Targets.FileTarget("logfile")
             {
                 FileName = LogFilePath,
-                ArchiveNumbering = NLog.Targets.ArchiveNumberingMode.Date,
+                ArchiveSuffixFormat = string.Empty,
                 ArchiveFileName = Path.Combine(
                     LogFileDir,
                     "Archive",
