@@ -11,15 +11,18 @@ namespace DNHper
         public static void SerializeXML(object item, string path)
         {
             XmlSerializer serializer = new XmlSerializer(item.GetType());
-            StreamWriter writer = new StreamWriter(path);
-
-            serializer.Serialize(
-                writer.BaseStream,
-                item,
-                new XmlSerializerNamespaces(new[] { XmlQualifiedName.Empty })
-            );
-
-            writer.Close();
+            try
+            {
+                using (var writer = new StreamWriter(path))
+                {
+                    serializer.Serialize(writer, item, new XmlSerializerNamespaces(new[] { XmlQualifiedName.Empty }));
+                }
+            }
+            catch (Exception e)
+            {
+                NLogger.Error($"SerializeXML failed for path {path}: {e.Message}");
+                throw;
+            }
         }
 
         public static T DeserializeXML<T>(string path)
@@ -27,17 +30,18 @@ namespace DNHper
         {
             if (!File.Exists(path))
                 return default(T);
+
             XmlSerializer serializer = new XmlSerializer(typeof(T));
-            StreamReader reader = new StreamReader(path);
             try
             {
-                T deserialized = (T)serializer.Deserialize(reader.BaseStream);
-                reader.Close();
-                return deserialized;
+                using (var reader = new StreamReader(path))
+                {
+                    return (T)serializer.Deserialize(reader);
+                }
             }
-            catch (System.Exception)
+            catch (Exception e)
             {
-                reader.Close();
+                NLogger.Error($"DeserializeXML failed for path {path}: {e.Message}");
                 throw;
             }
         }
@@ -51,7 +55,7 @@ namespace DNHper
             }
             catch (Exception e)
             {
-                NLogger.Error(e.Message);
+                NLogger.Error($"SerializeObject failed for path {inPath}: {e.Message}");
             }
         }
 
@@ -60,7 +64,7 @@ namespace DNHper
         {
             if (!File.Exists(inPath))
             {
-                NLogger.Warn("File {0} not exists.", inPath);
+                NLogger.Warn($"File {inPath} not exists.");
                 return default;
             }
 
@@ -71,7 +75,7 @@ namespace DNHper
             }
             catch (Exception e)
             {
-                NLogger.Error(e.Message);
+                NLogger.Error($"DeserializeObject failed for path {inPath}: {e.Message}");
                 return default;
             }
         }

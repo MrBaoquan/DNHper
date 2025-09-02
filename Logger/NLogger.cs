@@ -31,6 +31,7 @@ namespace DNHper
         /// </summary>
         public static void Initialize()
         {
+            UnityEngine.Debug.Log($"LogFilePath: {LogFilePath}");
             // 确保日志目录存在
             if (!Directory.Exists(LogFileDir))
             {
@@ -44,12 +45,9 @@ namespace DNHper
             {
                 FileName = LogFilePath,
                 ArchiveSuffixFormat = string.Empty,
-                ArchiveFileName = Path.Combine(
-                    LogFileDir,
-                    "Archive",
-                    "Player-${date:format=yyyy.MM.dd-HH.mm.ss}.log"
-                ),
+                ArchiveFileName = Path.Combine(LogFileDir, "Player-${date:format=yyyy.MM.dd-HH.mm.ss}.log"),
                 MaxArchiveFiles = 10,
+                // ArchiveOldFileOnStartup = true,
                 ArchiveEvery = NLog.Targets.FileArchivePeriod.Day,
                 Layout = "${longdate} [${level}] - ${message} ${exception:format=ToString}"
             };
@@ -79,10 +77,7 @@ namespace DNHper
         /// <returns>日志文本列表</returns>
         public static List<string> FetchMessage(int msgCount = -1)
         {
-            var memoryTarget =
-                LogManager.Configuration?.FindTargetByName<NLog.Targets.MemoryTarget>(
-                    "memoryTarget"
-                );
+            var memoryTarget = LogManager.Configuration?.FindTargetByName<NLog.Targets.MemoryTarget>("memoryTarget");
             if (memoryTarget == null)
             {
                 // 内存目标未找到，返回空列表
@@ -101,28 +96,23 @@ namespace DNHper
         // 简单封装日志写入接口
         public static void Info(string message) => LoggerInstance.Info(message);
 
-        public static void Info(string format, params object[] args) =>
-            LoggerInstance.Info(format, args);
+        public static void Info(string format, params object[] args) => LoggerInstance.Info(format, args);
 
         public static void Debug(string message) => LoggerInstance.Debug(message);
 
-        public static void Debug(string format, params object[] args) =>
-            LoggerInstance.Debug(format, args);
+        public static void Debug(string format, params object[] args) => LoggerInstance.Debug(format, args);
 
         public static void Warn(string message) => LoggerInstance.Warn(message);
 
-        public static void Warn(string format, params object[] args) =>
-            LoggerInstance.Warn(format, args);
+        public static void Warn(string format, params object[] args) => LoggerInstance.Warn(format, args);
 
         public static void Error(string message) => LoggerInstance.Error(message);
 
-        public static void Error(string format, params object[] args) =>
-            LoggerInstance.Error(format, args);
+        public static void Error(string format, params object[] args) => LoggerInstance.Error(format, args);
 
         public static void Fatal(string message) => LoggerInstance.Fatal(message);
 
-        public static void Fatal(string format, params object[] args) =>
-            LoggerInstance.Fatal(format, args);
+        public static void Fatal(string format, params object[] args) => LoggerInstance.Fatal(format, args);
 
         /// <summary>
         /// 关闭日志管理器释放资源
