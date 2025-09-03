@@ -31,7 +31,6 @@ namespace DNHper
         /// </summary>
         public static void Initialize()
         {
-            UnityEngine.Debug.Log($"LogFilePath: {LogFilePath}");
             // 确保日志目录存在
             if (!Directory.Exists(LogFileDir))
             {
