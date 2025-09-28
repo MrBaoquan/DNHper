@@ -1,685 +1,560 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Runtime.InteropServices;
 using System.Text;
-using System.Text.RegularExpressions;
 
 namespace DNHper
 {
-    public class WinAPI
+    public static class WinAPI
     {
-        // 调用命令
+        #region Process Management
         public static string CALLCMD(string InParameter)
         {
-            System.Diagnostics.Process _process = new System.Diagnostics.Process();
-            System.Diagnostics.ProcessStartInfo _startInfo =
-                new System.Diagnostics.ProcessStartInfo();
-
-            _startInfo.WindowStyle = System.Diagnostics.ProcessWindowStyle.Hidden;
-            _startInfo.FileName = "cmd.exe";
-            _startInfo.Arguments = InParameter;
-            _startInfo.CreateNoWindow = true;
-            _startInfo.UseShellExecute = false;
-            _startInfo.StandardOutputEncoding = Encoding.Default;
-            _startInfo.RedirectStandardOutput = true;
-            _process.StartInfo = _startInfo;
-            _process.Start();
-            using (StreamReader _reader = _process.StandardOutput)
+            using var process = new Process
             {
-                StreamReader s = _process.StandardOutput;
-                _process.WaitForExit();
-                return s.ReadToEnd().Trim();
-            }
+                StartInfo = new ProcessStartInfo
+                {
+                    WindowStyle = ProcessWindowStyle.Hidden,
+                    FileName = "cmd.exe",
+                    Arguments = InParameter,
+                    CreateNoWindow = true,
+                    UseShellExecute = false,
+                    StandardOutputEncoding = Encoding.Default,
+                    RedirectStandardOutput = true
+                }
+            };
+            process.Start();
+            var result = process.StandardOutput.ReadToEnd().Trim();
+            process.WaitForExit();
+            return result;
         }
 
-        public static Process FindProcess(string ProcessFileName)
-        {
-            return FindProcesses(ProcessFileName).FirstOrDefault();
-        }
+        public static Process FindProcess(string ProcessFileName) => FindProcesses(ProcessFileName).FirstOrDefault();
 
         public static List<Process> FindProcesses(string ProcessFileName)
         {
             try
             {
-                if (Path.IsPathRooted(ProcessFileName))
-                {
-                    return Process
+                var processes = Path.IsPathRooted(ProcessFileName)
+                    ? Process
                         .GetProcessesByName(Path.GetFileNameWithoutExtension(ProcessFileName))
-                        .ToList()
-                        .Where(_process => _process.GetMainModuleFileName() == ProcessFileName)
-                        .ToList();
-                }
-                var _processes = Process.GetProcesses().ToList();
-                return _processes
-                    .Where(_process => _process.ProcessName.ToUpper() == ProcessFileName.ToUpper())
-                    .ToList();
+                        .Where(p => p.GetMainModuleFileName() == ProcessFileName)
+                    : Process.GetProcesses().Where(p => p.ProcessName.Equals(ProcessFileName, StringComparison.OrdinalIgnoreCase));
+                return processes.ToList();
             }
-            catch (System.Exception e)
+            catch (Exception e)
             {
                 Console.WriteLine(e.Message);
                 return new List<Process>();
             }
         }
 
-        public static void KillProcesses(string ProcessFileName)
-        {
-            FindProcesses(ProcessFileName).ForEach(_process => _process.Kill());
-        }
+        public static void KillProcesses(string ProcessFileName) => FindProcesses(ProcessFileName).ForEach(p => p.Kill());
 
-        public static bool OpenProcess(
-            string Path,
-            string Args = "",
-            bool runas = false,
-            bool noWindow = false
-        )
-        {
-            if (!CheckValidExecutableFile(Path))
-                return false;
-            try
-            {
-                Process _process = new Process();
-                _process.StartInfo.FileName = Path;
-                _process.StartInfo.CreateNoWindow = noWindow;
-                _process.StartInfo.WorkingDirectory = System.IO.Path.GetDirectoryName(Path);
-                if (runas)
-                    _process.StartInfo.Verb = "runas";
-                _process.StartInfo.Arguments = Args;
-                return _process.Start();
-            }
-            catch (System.Exception)
-            {
-                return false;
-            }
-        }
-
-        public static bool OpenProcess(string Path, ProcessStartInfo startInfo)
-        {
-            if (!CheckValidExecutableFile(Path))
-                return false;
-            try
-            {
-                Process _process = new Process();
-                _process.StartInfo = startInfo;
-                return _process.Start();
-            }
-            catch (System.Exception)
-            {
-                return false;
-            }
-        }
-
-        public static bool CheckValidExecutableFile(string path)
-        {
-            return new List<string> { ".exe", ".bat", ".cmd", ".txt" }.Contains(
-                System.IO.Path.GetExtension(path)
+        public static bool OpenProcess(string Path, string Args = "", bool runas = false, bool noWindow = false) =>
+            CheckValidExecutableFile(Path)
+            && TryStartProcess(
+                new ProcessStartInfo
+                {
+                    FileName = Path,
+                    Arguments = Args,
+                    CreateNoWindow = noWindow,
+                    WorkingDirectory = System.IO.Path.GetDirectoryName(Path),
+                    Verb = runas ? "runas" : ""
+                }
             );
-        }
 
-        public static bool OpenProcessIfNotOpend(string Path, ProcessStartInfo startInfo)
+        public static bool OpenProcess(string Path, ProcessStartInfo startInfo) =>
+            CheckValidExecutableFile(Path) && TryStartProcess(startInfo);
+
+        public static bool OpenProcessIfNotOpend(string Path, ProcessStartInfo startInfo) =>
+            FindProcess(Path) == null && OpenProcess(Path, startInfo);
+
+        public static bool ProcessExists(string ProcessFileName) => FindProcess(ProcessFileName) != null;
+
+        public static bool CheckValidExecutableFile(string path) =>
+            new[] { ".exe", ".bat", ".cmd", ".txt" }.Contains(System.IO.Path.GetExtension(path));
+
+        private static bool TryStartProcess(ProcessStartInfo startInfo)
         {
-            if (WinAPI.FindProcess(Path) != default(Process))
+            try
+            {
+                return Process.Start(startInfo) != null;
+            }
+            catch
+            {
                 return false;
-            return OpenProcess(Path, startInfo);
+            }
         }
+        #endregion
 
-        public static bool ProcessExists(string ProcessFileName)
+        #region Window Operations
+        // 基础 API 封装
+        public static IntPtr CurrentWindow() => Process.GetCurrentProcess().MainWindowHandle;
+
+        public static bool IsWindowTopMost(IntPtr hWnd) =>
+            (User32.GetWindowLong(hWnd, (int)SetWindowLongIndex.GWL_EXSTYLE) & 0x80000) == 0x80000;
+
+        public static bool IsIconic(IntPtr hWnd) => User32.IsIconic(hWnd);
+
+        public static bool IsZoomed(IntPtr hWnd) => User32.IsZoomed(hWnd);
+
+        public static bool ShowWindow(IntPtr hwnd, int nCmdShow) => User32.ShowWindow(hwnd, nCmdShow);
+
+        public static IntPtr GetForegroundWindow() => User32.GetForegroundWindow();
+
+        public static bool SetForegroundWindow(IntPtr hWnd) => User32.SetForegroundWindow(hWnd);
+
+        public static IntPtr SetFocus(IntPtr hWnd) => User32.SetFocus(hWnd);
+
+        public static IntPtr FindWindow(string lpClassName, string lpWindowName) => User32.FindWindow(lpClassName, lpWindowName);
+
+        public static uint GetLastError() => Kernel32.GetLastError();
+
+        public static bool IsHungAppWindow(IntPtr hWnd) => User32.IsHungAppWindow(hWnd);
+
+        public static int GetWindowLong(IntPtr hWnd, int nIndex) => User32.GetWindowLong(hWnd, nIndex);
+
+        public static int SetWindowLong(IntPtr hWnd, int nIndex, uint dwNewLong) => User32.SetWindowLong(hWnd, nIndex, dwNewLong);
+
+        public static uint DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins) =>
+            Dwmapi.DwmExtendFrameIntoClientArea(hWnd, ref margins);
+
+        public static int SetWindowPos(IntPtr hWnd, int hWndInsertAfter, int x, int y, int Width, int Height, SetWindowPosFlags flags) =>
+            User32.SetWindowPos(hWnd, hWndInsertAfter, x, y, Width, Height, flags);
+
+        public static int SendMessage(IntPtr hWnd, int Msg, int wParam, StringBuilder lParam) =>
+            User32.SendMessage(hWnd, Msg, wParam, lParam);
+
+        public static IntPtr PostMessage(IntPtr hWnd, uint Msg, IntPtr wParam, IntPtr lParam) =>
+            User32.PostMessage(hWnd, Msg, wParam, lParam);
+
+        public static bool IsWindowVisible(IntPtr hWnd) => hWnd != IntPtr.Zero && User32.IsWindowVisible(hWnd);
+
+        // 扩展窗口控制功能
+        public static bool MaximizeWindow() => MaximizeWindow(CurrentWindow());
+
+        public static bool MaximizeWindow(IntPtr hWnd) => hWnd != IntPtr.Zero && ShowWindow(hWnd, (int)CMDShow.SW_SHOWMAXIMIZED);
+
+        public static bool MinimizeWindow() => MinimizeWindow(CurrentWindow());
+
+        public static bool MinimizeWindow(IntPtr hWnd) => hWnd != IntPtr.Zero && ShowWindow(hWnd, (int)CMDShow.SW_SHOWMINIMIZED);
+
+        public static bool RestoreWindow() => RestoreWindow(CurrentWindow());
+
+        public static bool RestoreWindow(IntPtr hWnd) => hWnd != IntPtr.Zero && ShowWindow(hWnd, (int)CMDShow.SW_RESTORE);
+
+        public static bool ShowWindowNormal() => ShowWindowNormal(CurrentWindow());
+
+        public static bool ShowWindowNormal(IntPtr hWnd) => hWnd != IntPtr.Zero && ShowWindow(hWnd, (int)CMDShow.SW_SHOWNORMAL);
+
+        public static bool HideWindow() => HideWindow(CurrentWindow());
+
+        public static bool HideWindow(IntPtr hWnd) => hWnd != IntPtr.Zero && ShowWindow(hWnd, (int)CMDShow.SW_HIDE);
+
+        public static bool ShowWindowNoActivate(IntPtr hWnd) => hWnd != IntPtr.Zero && ShowWindow(hWnd, (int)CMDShow.SW_SHOW);
+
+        public static WindowState GetWindowState(IntPtr hWnd)
         {
-            return WinAPI.FindProcess(ProcessFileName) != default(Process);
+            if (hWnd == IntPtr.Zero)
+                return WindowState.Invalid;
+            if (!IsWindowVisible(hWnd))
+                return WindowState.Hidden;
+            if (IsIconic(hWnd))
+                return WindowState.Minimized;
+            if (IsZoomed(hWnd))
+                return WindowState.Maximized;
+            return WindowState.Normal;
         }
 
-        // 窗口是否最大化
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool IsIconic(IntPtr hWnd);
-
-        // 窗口是否最小化
-
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool IsZoomed(IntPtr hWnd);
-
-        // 操作窗口
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool ShowWindow(IntPtr hwnd, int nCmdShow);
-
-        // 获取当前激活窗口
-
-        [DllImport("user32.dll")]
-        public static extern IntPtr GetForegroundWindow();
-
-        //激活指定窗口
-        [DllImport("user32.dll")]
-        public static extern bool SetForegroundWindow(IntPtr hWnd);
-
-        [DllImport("user32.dll")]
-        public static extern IntPtr SetFocus(IntPtr hWnd);
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        public static extern IntPtr FindWindow(string lpClassName, string lpWindowName);
-
-        [DllImport("kernel32.dll")]
-        public static extern uint GetLastError();
-
-        [DllImport("user32.dll")]
-        [return: MarshalAs(UnmanagedType.Bool)]
-        public static extern bool IsHungAppWindow(IntPtr hWnd);
-
-        // 鼠标事件模拟
-        [DllImport("user32.dll", EntryPoint = "mouse_event")]
-        public static extern void mouse_event(
-            int dwFlags,
-            int dx,
-            int dy,
-            int cButtons,
-            int dwExtraInfo
-        );
-
-        [StructLayout(LayoutKind.Sequential)]
-        struct INPUT
+        public static string GetWindowTitle(IntPtr hWnd)
         {
-            public uint type;
-            public MOUSEINPUT mi;
+            if (hWnd == IntPtr.Zero)
+                return string.Empty;
+            try
+            {
+                int length = User32.GetWindowTextLength(hWnd);
+                if (length == 0)
+                    return string.Empty;
+                var sb = new StringBuilder(length + 1);
+                User32.GetWindowText(hWnd, sb, sb.Capacity);
+                return sb.ToString();
+            }
+            catch
+            {
+                return string.Empty;
+            }
         }
 
-        [StructLayout(LayoutKind.Sequential)]
-        struct MOUSEINPUT
+        public static bool ToggleWindowState(IntPtr hWnd)
         {
-            public int dx;
-            public int dy;
-            public uint mouseData;
-            public uint dwFlags;
-            public uint time;
-            public IntPtr dwExtraInfo;
+            if (hWnd == IntPtr.Zero)
+                return false;
+            return GetWindowState(hWnd) switch
+            {
+                WindowState.Minimized => RestoreWindow(hWnd),
+                WindowState.Maximized => RestoreWindow(hWnd),
+                WindowState.Normal => MinimizeWindow(hWnd),
+                WindowState.Hidden => ShowWindowNormal(hWnd),
+                _ => false
+            };
         }
 
-        const int INPUT_MOUSE = 0;
+        public static bool SmartShowWindow(IntPtr hWnd)
+        {
+            if (hWnd == IntPtr.Zero)
+                return false;
+            return GetWindowState(hWnd) switch
+            {
+                WindowState.Hidden => ShowWindowNormal(hWnd) && SetForegroundWindow(hWnd),
+                WindowState.Minimized => RestoreWindow(hWnd) && SetForegroundWindow(hWnd),
+                WindowState.Normal or WindowState.Maximized => SetForegroundWindow(hWnd),
+                _ => false
+            };
+        }
 
-        [DllImport("user32.dll", SetLastError = true)]
-        static extern uint SendInput(uint nInputs, INPUT[] pInputs, int cbSize);
+        public static bool ExecuteWindowAction(IntPtr hWnd, WindowAction action)
+        {
+            if (hWnd == IntPtr.Zero)
+                return false;
+            return action switch
+            {
+                WindowAction.Maximize => MaximizeWindow(hWnd),
+                WindowAction.Minimize => MinimizeWindow(hWnd),
+                WindowAction.Restore => RestoreWindow(hWnd),
+                WindowAction.Show => ShowWindowNormal(hWnd),
+                WindowAction.Hide => HideWindow(hWnd),
+                WindowAction.Toggle => ToggleWindowState(hWnd),
+                WindowAction.Activate => SmartShowWindow(hWnd),
+                _ => false
+            };
+        }
+
+        public static int BatchWindowControl(IntPtr[] hWnds, WindowAction action) =>
+            hWnds?.Count(hWnd => ExecuteWindowAction(hWnd, action)) ?? 0;
+
+        public static int ControlWindowsByProcessName(string processName, WindowAction action)
+        {
+            if (string.IsNullOrEmpty(processName))
+                return 0;
+            var hWnds = FindProcesses(processName).Where(p => p.MainWindowHandle != IntPtr.Zero).Select(p => p.MainWindowHandle).ToArray();
+            return BatchWindowControl(hWnds, action);
+        }
+
+        public static int ControlWindowsByTitle(string windowTitle, WindowAction action, bool exactMatch = false)
+        {
+            if (string.IsNullOrEmpty(windowTitle))
+                return 0;
+            var matchingWindows = Process
+                .GetProcesses()
+                .Where(p => p.MainWindowHandle != IntPtr.Zero)
+                .Select(p => new { Handle = p.MainWindowHandle, Title = GetWindowTitle(p.MainWindowHandle) })
+                .Where(
+                    w =>
+                        exactMatch
+                            ? w.Title.Equals(windowTitle, StringComparison.OrdinalIgnoreCase)
+                            : w.Title.Contains(windowTitle, StringComparison.OrdinalIgnoreCase)
+                )
+                .Select(w => w.Handle)
+                .ToArray();
+            return BatchWindowControl(matchingWindows, action);
+        }
+
+        public static WindowInfo GetWindowInfo(IntPtr hWnd)
+        {
+            if (hWnd == IntPtr.Zero)
+                return null;
+            try
+            {
+                return new WindowInfo
+                {
+                    Handle = hWnd,
+                    Title = GetWindowTitle(hWnd),
+                    State = GetWindowState(hWnd),
+                    IsVisible = IsWindowVisible(hWnd),
+                    IsTopMost = IsWindowTopMost(hWnd),
+                    IsHung = IsHungAppWindow(hWnd)
+                };
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        public static List<WindowInfo> GetAllVisibleWindows()
+        {
+            return Process
+                .GetProcesses()
+                .Where(p => p.MainWindowHandle != IntPtr.Zero)
+                .Select(p => new { Process = p, Info = GetWindowInfo(p.MainWindowHandle) })
+                .Where(x => x.Info?.IsVisible == true)
+                .Select(x =>
+                {
+                    x.Info.ProcessName = x.Process.ProcessName;
+                    x.Info.ProcessId = x.Process.Id;
+                    return x.Info;
+                })
+                .ToList();
+        }
+        #endregion
+
+        #region Mouse Operations
+        public static void SetCursorPos(int x, int y) => User32.SetCursorPos(x, y);
+
+        public static bool ShowCursor(bool bShow) => User32.ShowCursor(bShow);
 
         public static void ClickLeftMouseButton()
         {
-            INPUT[] inputs = new INPUT[2];
+            var inputs = new[] { InputHelper.CreateMouseInput(MOUSEEVENTF_LEFTDOWN), InputHelper.CreateMouseInput(MOUSEEVENTF_LEFTUP) };
+            if (User32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>()) == 0)
+                Console.WriteLine("鼠标点击发送失败");
+        }
 
-            // 鼠标左键按下
-            inputs[0].type = INPUT_MOUSE;
-            inputs[0].mi.dwFlags = MOUSEEVENTF_LEFTDOWN;
+        public static void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo) =>
+            User32.mouse_event(dwFlags, dx, dy, cButtons, dwExtraInfo);
+        #endregion
 
-            // 鼠标左键抬起
-            inputs[1].type = INPUT_MOUSE;
-            inputs[1].mi.dwFlags = MOUSEEVENTF_LEFTUP;
+        #region Monitor/Display Operations
+        public static MonitorInfo GetPrimaryMonitorResolution()
+        {
+            var primaryMonitor = User32.MonitorFromPoint(new POINT(0, 0), MonitorOptions.MONITOR_DEFAULTTOPRIMARY);
+            var monitorInfo = new MONITORINFOEX { cbSize = Marshal.SizeOf<MONITORINFOEX>() };
 
-            uint result = SendInput((uint)inputs.Length, inputs, Marshal.SizeOf(typeof(INPUT)));
-
-            if (result == 0)
+            if (User32.GetMonitorInfo(primaryMonitor, ref monitorInfo))
             {
-                NLogger.Error("鼠标点击发送失败");
+                var rect = monitorInfo.rcMonitor;
+                return new MonitorInfo
+                {
+                    DeviceName = monitorInfo.szDevice,
+                    Width = rect.right - rect.left,
+                    Height = rect.bottom - rect.top,
+                    Left = rect.left,
+                    Top = rect.top,
+                    IsPrimary = true
+                };
+            }
+            return null;
+        }
+
+        public static List<MonitorInfo> GetAllMonitorsResolution()
+        {
+            var monitors = new List<MonitorInfo>();
+            User32.EnumDisplayMonitors(
+                IntPtr.Zero,
+                IntPtr.Zero,
+                (IntPtr hMonitor, IntPtr hdcMonitor, ref RECT lprcMonitor, IntPtr dwData) =>
+                {
+                    var monitorInfo = new MONITORINFOEX { cbSize = Marshal.SizeOf<MONITORINFOEX>() };
+                    if (User32.GetMonitorInfo(hMonitor, ref monitorInfo))
+                    {
+                        var rect = monitorInfo.rcMonitor;
+                        monitors.Add(
+                            new MonitorInfo
+                            {
+                                DeviceName = monitorInfo.szDevice,
+                                Width = rect.right - rect.left,
+                                Height = rect.bottom - rect.top,
+                                Left = rect.left,
+                                Top = rect.top,
+                                IsPrimary = (monitorInfo.dwFlags & MONITORINFOF_PRIMARY) != 0
+                            }
+                        );
+                    }
+                    return true;
+                },
+                IntPtr.Zero
+            );
+            return monitors;
+        }
+
+        public static MonitorInfo GetMonitorFromPoint(int x, int y) =>
+            GetMonitorInfo(User32.MonitorFromPoint(new POINT(x, y), MonitorOptions.MONITOR_DEFAULTTONEAREST));
+
+        public static MonitorInfo GetMonitorFromWindow(IntPtr hWnd) =>
+            GetMonitorInfo(User32.MonitorFromWindow(hWnd, MonitorOptions.MONITOR_DEFAULTTONEAREST));
+
+        private static MonitorInfo GetMonitorInfo(IntPtr hMonitor)
+        {
+            var monitorInfo = new MONITORINFOEX { cbSize = Marshal.SizeOf<MONITORINFOEX>() };
+            if (User32.GetMonitorInfo(hMonitor, ref monitorInfo))
+            {
+                var rect = monitorInfo.rcMonitor;
+                return new MonitorInfo
+                {
+                    DeviceName = monitorInfo.szDevice,
+                    Width = rect.right - rect.left,
+                    Height = rect.bottom - rect.top,
+                    Left = rect.left,
+                    Top = rect.top,
+                    IsPrimary = (monitorInfo.dwFlags & MONITORINFOF_PRIMARY) != 0
+                };
+            }
+            return null;
+        }
+
+        public static int GetMonitorCount() => User32.GetSystemMetrics(SystemMetric.SM_CMONITORS);
+
+        public static (int Width, int Height) GetVirtualScreenSize() =>
+            (User32.GetSystemMetrics(SystemMetric.SM_CXVIRTUALSCREEN), User32.GetSystemMetrics(SystemMetric.SM_CYVIRTUALSCREEN));
+
+        public static ExtendedDesktopInfo GetExtendedDesktopResolution()
+        {
+            var monitors = GetAllMonitorsResolution();
+            if (monitors?.Count == 0)
+                return null;
+
+            int minX = monitors.Min(m => m.Left),
+                minY = monitors.Min(m => m.Top);
+            int maxX = monitors.Max(m => m.Left + m.Width),
+                maxY = monitors.Max(m => m.Top + m.Height);
+
+            return new ExtendedDesktopInfo
+            {
+                TotalWidth = maxX - minX,
+                TotalHeight = maxY - minY,
+                LeftBound = minX,
+                TopBound = minY,
+                RightBound = maxX,
+                BottomBound = maxY,
+                MonitorCount = monitors.Count,
+                Monitors = monitors,
+                VirtualScreenSize = GetVirtualScreenSize()
+            };
+        }
+
+        public static (int TotalWidth, int TotalHeight) GetExtendedDesktopSize()
+        {
+            var info = GetExtendedDesktopResolution();
+            return info != null ? (info.TotalWidth, info.TotalHeight) : (0, 0);
+        }
+
+        public static bool IsPointInExtendedDesktop(int x, int y)
+        {
+            var info = GetExtendedDesktopResolution();
+            return info != null && x >= info.LeftBound && x < info.RightBound && y >= info.TopBound && y < info.BottomBound;
+        }
+
+        public static (int CenterX, int CenterY) GetExtendedDesktopCenter()
+        {
+            var info = GetExtendedDesktopResolution();
+            return info != null ? (info.LeftBound + info.TotalWidth / 2, info.TopBound + info.TotalHeight / 2) : (0, 0);
+        }
+        #endregion
+
+        #region HotKey Management
+        public static bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk) =>
+            User32.RegisterHotKey(hWnd, id, fsModifiers, vk);
+
+        public static bool UnregisterHotKey(IntPtr hWnd, int id) => User32.UnregisterHotKey(hWnd, id);
+        #endregion
+
+        #region System Operations
+        public static bool ShutdownBlockReasonCreate(IntPtr hWnd, string pwszReason) => User32.ShutdownBlockReasonCreate(hWnd, pwszReason);
+
+        public static bool ShutdownBlockReasonDestroy(IntPtr hWnd) => User32.ShutdownBlockReasonDestroy(hWnd);
+        #endregion
+
+        #region Constants
+        public const int MOUSEEVENTF_LEFTDOWN = 0x2,
+            MOUSEEVENTF_LEFTUP = 0x4,
+            MOUSEEVENTF_MIDDLEDOWN = 0x20,
+            MOUSEEVENTF_MIDDLEUP = 0x40,
+            MOUSEEVENTF_MOVE = 0x1,
+            MOUSEEVENTF_RIGHTDOWN = 0x8,
+            MOUSEEVENTF_RIGHTUP = 0x10;
+        private const uint MONITORINFOF_PRIMARY = 0x00000001;
+        #endregion
+    }
+
+    // 窗口信息类
+    public class WindowInfo
+    {
+        public IntPtr Handle { get; set; }
+        public string Title { get; set; }
+        public WindowState State { get; set; }
+        public bool IsVisible { get; set; }
+        public bool IsTopMost { get; set; }
+        public bool IsHung { get; set; }
+        public string ProcessName { get; set; }
+        public int ProcessId { get; set; }
+
+        public override string ToString() =>
+            $"[{ProcessName}:{ProcessId}] {Title} - {State}" + (IsTopMost ? " [TopMost]" : "") + (IsHung ? " [Hung]" : "");
+    }
+
+    // 显示器信息类
+    public class MonitorInfo
+    {
+        public string DeviceName { get; set; }
+        public int Width { get; set; }
+        public int Height { get; set; }
+        public int Left { get; set; }
+        public int Top { get; set; }
+        public bool IsPrimary { get; set; }
+
+        public override string ToString() => $"{DeviceName}: {Width}x{Height} at ({Left},{Top}){(IsPrimary ? " [Primary]" : "")}";
+    }
+
+    // 扩展桌面信息类
+    public class ExtendedDesktopInfo
+    {
+        public int TotalWidth { get; set; }
+        public int TotalHeight { get; set; }
+        public int LeftBound { get; set; }
+        public int TopBound { get; set; }
+        public int RightBound { get; set; }
+        public int BottomBound { get; set; }
+        public int MonitorCount { get; set; }
+        public List<MonitorInfo> Monitors { get; set; }
+        public (int Width, int Height) VirtualScreenSize { get; set; }
+
+        public (int X, int Y) Center => (LeftBound + TotalWidth / 2, TopBound + TotalHeight / 2);
+        public long TotalArea => (long)TotalWidth * TotalHeight;
+        public long ActualMonitorArea => Monitors?.Sum(m => (long)m.Width * m.Height) ?? 0;
+        public double LayoutEfficiency => TotalArea > 0 ? (double)ActualMonitorArea / TotalArea : 0;
+
+        public override string ToString() =>
+            $"扩展桌面: {TotalWidth}x{TotalHeight} 范围: ({LeftBound},{TopBound}) 到 ({RightBound},{BottomBound}) 显示器数量: {MonitorCount} 布局效率: {LayoutEfficiency:P2}";
+
+        public string GetDetailedInfo()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine($"扩展桌面详细信息:");
+            sb.AppendLine($"  总分辨率: {TotalWidth} x {TotalHeight}");
+            sb.AppendLine($"  边界范围: ({LeftBound}, {TopBound}) 到 ({RightBound}, {BottomBound})");
+            sb.AppendLine($"  中心点: {Center.X}, {Center.Y}");
+            sb.AppendLine($"  总面积: {TotalArea:N0} 像素");
+            sb.AppendLine($"  显示器数量: {MonitorCount}");
+            sb.AppendLine($"  实际显示面积: {ActualMonitorArea:N0} 像素");
+            sb.AppendLine($"  布局效率: {LayoutEfficiency:P2}");
+            sb.AppendLine($"  系统虚拟屏幕: {VirtualScreenSize.Width} x {VirtualScreenSize.Height}");
+
+            if (Monitors?.Count > 0)
+            {
+                sb.AppendLine("  各显示器信息:");
+                for (int i = 0; i < Monitors.Count; i++)
+                    sb.AppendLine($"    [{i + 1}] {Monitors[i]}");
+            }
+            return sb.ToString();
+        }
+    }
+
+    public static class ProcessExtensions
+    {
+        public static string GetMainModuleFileName(this Process process)
+        {
+            try
+            {
+                return process.MainModule?.FileName ?? string.Empty;
+            }
+            catch
+            {
+                return string.Empty;
             }
         }
-
-        [DllImport("user32.dll", EntryPoint = "GetWindowLongW", CharSet = CharSet.Unicode)]
-        public static extern int GetWindowLong(IntPtr hWnd, int nIndex);
-
-        [DllImport("user32.dll", EntryPoint = "SetWindowLongW", CharSet = CharSet.Unicode)]
-        public static extern int SetWindowLong(IntPtr hWnd, int nIndex, UInt32 dwNewLong);
-
-        public struct MARGINS
-        {
-            public int cxLeftWidth;
-            public int cxRightWidth;
-            public int cyTopHeight;
-            public int cyBottomHeight;
-        }
-
-        [DllImport("Dwmapi.dll")]
-        public static extern uint DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode)]
-        public static extern int SetWindowPos(
-            IntPtr hWnd,
-            int hWndInsertAfter,
-            int x,
-            int y,
-            int Width,
-            int Height,
-            SetWindowPosFlags flags
-        );
-
-        public static IntPtr CurrentWindow()
-        {
-            string _process = Process.GetCurrentProcess().ProcessName;
-            return FindWindow(null, _process);
-        }
-
-        public static bool IsWindowTopMost(IntPtr hWnd)
-        {
-            return (GetWindowLong(hWnd, -20) & 0x80000) == 0x80000;
-        }
-
-        // public const int GWL_STYLE = (-16);
-        // public const int WS_CAPTION = 0xC00000;
-        // public const int WS_VISIBLE = 0x10000000;
-        // public const int WS_HSCROLL = 0x00100000;
-        // public const int WS_BORDER = 0x00800000;
-
-        [DllImport("User32.dll")]
-        private static extern bool ShowWindowAsync(IntPtr hWnd, int cmdShow);
-
-        [DllImport("User32")]
-        public extern static void SetCursorPos(int x, int y);
-
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern int SendMessage(
-            IntPtr hWnd,
-            int Msg,
-            int wParam,
-            StringBuilder lParam
-        );
-
-        [DllImport("user32.dll", SetLastError = true)]
-        public static extern IntPtr PostMessage(
-            IntPtr hWnd,
-            uint Msg,
-            IntPtr wParam,
-            IntPtr lParam
-        );
-
-        [System.Runtime.InteropServices.DllImport("user32.dll", EntryPoint = "ShowCursor")]
-        public extern static bool ShowCursor(bool bShow);
-
-        // Registers a hot key with Windows.
-        [DllImport("user32.dll")]
-        public static extern bool RegisterHotKey(IntPtr hWnd, int id, uint fsModifiers, uint vk);
-
-        // Unregisters the hot key with Windows.
-        [DllImport("user32.dll")]
-        public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
-
-        [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public extern static bool ShutdownBlockReasonCreate(
-            [In] IntPtr hWnd,
-            [In] string pwszReason
-        );
-
-        [DllImport("user32.dll", SetLastError = true)]
-        public extern static bool ShutdownBlockReasonDestroy([In] IntPtr hWnd);
-
-        // 常量
-        public const int MOUSEEVENTF_LEFTDOWN = 0x2;
-        public const int MOUSEEVENTF_LEFTUP = 0x4;
-
-        public const int MOUSEEVENTF_MIDDLEDOWN = 0x20;
-
-        public const int MOUSEEVENTF_MIDDLEUP = 0x40;
-
-        public const int MOUSEEVENTF_MOVE = 0x1;
-
-        public const int MOUSEEVENTF_RIGHTDOWN = 0x8;
-
-        public const int MOUSEEVENTF_RIGHTUP = 0x10;
-    }
-
-    public enum CMDShow
-    {
-        SW_HIDE = 0,
-        SW_SHOWNORMAL = 1,
-        SW_NORMAL = SW_SHOWNORMAL,
-        SW_SHOWMINIMIZED = 2,
-        SW_SHOWMAXIMIZED = 3, //最大化
-        SW_SHOW = 5,
-        SW_RESTORE = 9
-    }
-
-    public enum HWndInsertAfter
-    {
-        HWND_TOPMOST = -1,
-        HWND_NOTOPMOST = -2,
-        HWND_BOTTOM = 1,
-        HWND_TOP = 0
-    }
-
-    public enum UFullScreenMode
-    {
-        //
-        // 摘要:
-        //     Exclusive Mode.
-        ExclusiveFullScreen = 0,
-
-        //
-        // 摘要:
-        //     Fullscreen window.
-        FullScreenWindow = 1,
-
-        //
-        // 摘要:
-        //     Maximized window.
-        MaximizedWindow = 2,
-
-        //
-        // 摘要:
-        //     Windowed.
-        Windowed = 3,
-
-        // Not Unity buildin value below
-        MinimizedWindow = 11,
-    }
-
-    [Flags]
-    public enum SetWindowPosFlags : uint
-    {
-        // ReSharper disable InconsistentNaming
-
-        /// <summary>
-        ///     If the calling thread and the thread that owns the window are attached to different input queues, the system posts the request to the thread that owns the window. This prevents the calling thread from blocking its execution while other threads process the request.
-        /// </summary>
-        SWP_ASYNCWINDOWPOS = 0x4000,
-
-        /// <summary>
-        ///     Prevents generation of the WM_SYNCPAINT message.
-        /// </summary>
-        SWP_DEFERERASE = 0x2000,
-
-        /// <summary>
-        ///     Draws a frame (defined in the window's class description) around the window.
-        /// </summary>
-        SWP_DRAWFRAME = 0x0020,
-
-        /// <summary>
-        ///     Applies new frame styles set using the SetWindowLong function. Sends a WM_NCCALCSIZE message to the window, even if the window's size is not being changed. If this flag is not specified, WM_NCCALCSIZE is sent only when the window's size is being changed.
-        /// </summary>
-        SWP_FRAMECHANGED = 0x0020,
-
-        /// <summary>
-        ///     Hides the window.
-        /// </summary>
-        SWP_HIDEWINDOW = 0x0080,
-
-        /// <summary>
-        ///     Does not activate the window. If this flag is not set, the window is activated and moved to the top of either the topmost or non-topmost group (depending on the setting of the hWndInsertAfter parameter).
-        /// </summary>
-        SWP_NOACTIVATE = 0x0010,
-
-        /// <summary>
-        ///     Discards the entire contents of the client area. If this flag is not specified, the valid contents of the client area are saved and copied back into the client area after the window is sized or repositioned.
-        /// </summary>
-        SWP_NOCOPYBITS = 0x0100,
-
-        /// <summary>
-        ///     Retains the current position (ignores X and Y parameters).
-        /// </summary>
-        SWP_NOMOVE = 0x0002,
-
-        /// <summary>
-        ///     Does not change the owner window's position in the Z order.
-        /// </summary>
-        SWP_NOOWNERZORDER = 0x0200,
-
-        /// <summary>
-        ///     Does not redraw changes. If this flag is set, no repainting of any kind occurs. This applies to the client area, the nonclient area (including the title bar and scroll bars), and any part of the parent window uncovered as a result of the window being moved. When this flag is set, the application must explicitly invalidate or redraw any parts of the window and parent window that need redrawing.
-        /// </summary>
-        SWP_NOREDRAW = 0x0008,
-
-        /// <summary>
-        ///     Same as the SWP_NOOWNERZORDER flag.
-        /// </summary>
-        SWP_NOREPOSITION = 0x0200,
-
-        /// <summary>
-        ///     Prevents the window from receiving the WM_WINDOWPOSCHANGING message.
-        /// </summary>
-        SWP_NOSENDCHANGING = 0x0400,
-
-        /// <summary>
-        ///     Retains the current size (ignores the cx and cy parameters).
-        /// </summary>
-        SWP_NOSIZE = 0x0001,
-
-        /// <summary>
-        ///     Retains the current Z order (ignores the hWndInsertAfter parameter).
-        /// </summary>
-        SWP_NOZORDER = 0x0004,
-
-        /// <summary>
-        ///     Displays the window.
-        /// </summary>
-        SWP_SHOWWINDOW = 0x0040,
-
-        // ReSharper restore InconsistentNaming
-    }
-
-    [Flags]
-    public enum GWL_STYLE : long
-    {
-        WS_BORDER = 0x00800000L,
-
-        //The window has a thin - line border.
-        WS_CAPTION = 0x00C00000L,
-
-        //The window has a title bar (includes the WS_BORDER style).
-        WS_CHILD = 0x40000000L,
-
-        //The window is a child window.A window with this style cannot have a menu bar.This style cannot be used with the WS_POPUP style.
-        WS_CHILDWINDOW = 0x40000000L,
-
-        //Same as the WS_CHILD style.
-        WS_CLIPCHILDREN = 0x02000000L,
-
-        //Excludes the area occupied by child windows when drawing occurs within the parent window.This style is used when creating the parent window.
-        WS_CLIPSIBLINGS = 0x04000000L,
-
-        //Clips child windows relative to each other;
-        //that is, when a particular child window receives a WM_PAINT message, the WS_CLIPSIBLINGS style clips all other overlapping child windows out of the region of the child window to be updated.If WS_CLIPSIBLINGS is not specified and child windows overlap, it is possible, when drawing within the client area of a child window, to draw within the client area of a neighboring child window.
-        WS_DISABLED = 0x08000000L,
-
-        //The window is initially disabled.A disabled window cannot receive input from the user.To change this after a window has been created, use the EnableWindow function.
-        WS_DLGFRAME = 0x00400000L,
-
-        //The window has a border of a style typically used with dialog boxes.A window with this style cannot have a title bar.
-        WS_GROUP = 0x00020000L,
-
-        //The window is the first control of a group of controls.The group consists of this first control and all controls defined after it, up to the next control with the WS_GROUP style.The first control in each group usually has the WS_TABSTOP style so that the user can move from group to group.The user can subsequently change the keyboard focus from one control in the group to the next control in the group by using the direction keys.
-        //You can turn this style on and off to change dialog box navigation.To change this style after a window has been created, use the SetWindowLong function.
-        WS_HSCROLL = 0x00100000L,
-
-        //The window has a horizontal scroll bar.
-        WS_ICONIC = 0x20000000L,
-
-        //The window is initially minimized.Same as the WS_MINIMIZE style.
-        WS_MAXIMIZE = 0x01000000L,
-
-        //The window is initially maximized.
-        WS_MAXIMIZEBOX = 0x00010000L,
-
-        //The window has a maximize button.Cannot be combined with the WS_EX_CONTEXTHELP style.The WS_SYSMENU style must also be specified.
-        WS_MINIMIZE = 0x20000000L,
-
-        //The window is initially minimized.Same as the WS_ICONIC style.
-        WS_MINIMIZEBOX = 0x00020000L,
-
-        //The window has a minimize button.Cannot be combined with the WS_EX_CONTEXTHELP style.The WS_SYSMENU style must also be specified.
-        WS_OVERLAPPED = 0x00000000L,
-
-        //The window is an overlapped window.An overlapped window has a title bar and a border.Same as the WS_TILED style.
-        WS_OVERLAPPEDWINDOW =
-            WS_OVERLAPPED
-            | WS_CAPTION
-            | WS_SYSMENU
-            | WS_THICKFRAME
-            | WS_MINIMIZEBOX
-            | WS_MAXIMIZEBOX,
-
-        //The window is an overlapped window.Same as the WS_TILEDWINDOW style.
-        WS_POPUP = 0x80000000L,
-
-        //The window is a pop - up window.This style cannot be used with the WS_CHILD style.
-        WS_POPUPWINDOW = WS_POPUP | WS_BORDER | WS_SYSMENU,
-
-        //The window is a pop - up window.The WS_CAPTION and WS_POPUPWINDOW styles must be combined to make the window menu visible.
-        WS_SIZEBOX = 0x00040000L,
-
-        //The window has a sizing border.Same as the WS_THICKFRAME style.
-        WS_SYSMENU = 0x00080000L,
-
-        //The window has a window menu on its title bar.The WS_CAPTION style must also be specified.
-        WS_TABSTOP = 0x00010000L,
-
-        //The window is a control that can receive the keyboard focus when the user presses the TAB key.Pressing the TAB key changes the keyboard focus to the next control with the WS_TABSTOP style.
-        //You can turn this style on and off to change dialog box navigation.To change this style after a window has been created, use the SetWindowLong function.For user - created windows and modeless dialogs to work with tab stops, alter the message loop to call the IsDialogMessage function.
-        WS_THICKFRAME = 0x00040000L,
-
-        //The window has a sizing border.Same as the WS_SIZEBOX style.
-        WS_TILED = 0x00000000L,
-
-        //The window is an overlapped window.An overlapped window has a title bar and a border.Same as the WS_OVERLAPPED style.
-        WS_TILEDWINDOW =
-            WS_OVERLAPPED
-            | WS_CAPTION
-            | WS_SYSMENU
-            | WS_THICKFRAME
-            | WS_MINIMIZEBOX
-            | WS_MAXIMIZEBOX,
-
-        //The window is an overlapped window.Same as the WS_OVERLAPPEDWINDOW style.
-        WS_VISIBLE = 0x10000000L,
-
-        //The window is initially visible.
-        //This style can be turned on and off by using the ShowWindow or SetWindowPos function.
-        WS_VSCROLL = 0x00200000L,
-    }
-
-    [Flags]
-    public enum GWL_EXSTYLE : long
-    {
-        WS_EX_ACCEPTFILES = 0x00000010L,
-
-        // The window accepts drag - drop files.
-        WS_EX_APPWINDOW = 0x00040000L,
-
-        // Forces a top - level window onto the taskbar when the window is visible.
-        WS_EX_CLIENTEDGE = 0x00000200L,
-
-        // The window has a border with a sunken edge.
-        WS_EX_COMPOSITED = 0x02000000L,
-
-        // Paints all descendants of a window in bottom - to - top painting order using double - buffering.Bottom - to - top painting order allows a descendent window to have translucency (alpha) and transparency (color - key) effects, but only
-        // if the descendent window also has the WS_EX_TRANSPARENT bit set.Double - buffering allows the window and its descendents to be painted without flicker.This cannot be used
-        // if the window has a class style of either CS_OWNDC or CS_CLASSDC.
-        // Windows 2000 : This style is not supported.
-        WS_EX_CONTEXTHELP = 0x00000400L,
-
-        // The title bar of the window includes a question mark.When the user clicks the question mark, the cursor changes to a question mark with a pointer.If the user then clicks a child window, the child receives a WM_HELP message.The child window should pass the message to the parent window procedure, which should call the WinHelp function using the HELP_WM_HELP command.The Help application displays a pop - up window that typically contains help
-        // for the child window.
-        // WS_EX_CONTEXTHELP cannot be used with the WS_MAXIMIZEBOX or WS_MINIMIZEBOX styles.
-        WS_EX_CONTROLPARENT = 0x00010000L,
-
-        // The window itself contains child windows that should take part in dialog box navigation.If this style is specified, the dialog manager recurses into children of this window when performing navigation operations such as handling the TAB key, an arrow key, or a keyboard mnemonic.
-        WS_EX_DLGMODALFRAME = 0x00000001L,
-
-        // The window has a double border;
-        // the window can, optionally, be created with a title bar by specifying the WS_CAPTION style in the dwStyle parameter.
-        WS_EX_LAYERED = 0x00080000,
-
-        // The window is a layered window.This style cannot be used
-        // if the window has a class style of either CS_OWNDC or CS_CLASSDC.
-        // Windows 8 : The WS_EX_LAYERED style is supported
-        // for top - level windows and child windows.Previous Windows versions support WS_EX_LAYERED only
-        // for top - level windows.
-        WS_EX_LAYOUTRTL = 0x00400000L,
-
-        // If the shell language is Hebrew, Arabic, or another language that supports reading order alignment, the horizontal origin of the window is on the right edge.Increasing horizontal values advance to the left.
-        WS_EX_LEFT = 0x00000000L,
-
-        // The window has generic left - aligned properties.This is the default.
-        WS_EX_LEFTSCROLLBAR = 0x00004000L,
-
-        // If the shell language is Hebrew, Arabic, or another language that supports reading order alignment, the vertical scroll bar (
-        // if present) is to the left of the client area.For other languages, the style is ignored.
-        WS_EX_LTRREADING = 0x00000000L,
-
-        // The window text is displayed using left - to - right reading - order properties.This is the default.
-        WS_EX_MDICHILD = 0x00000040L,
-
-        // The window is a MDI child window.
-        WS_EX_NOACTIVATE = 0x08000000L,
-
-        // A top - level window created with this style does not become the foreground window when the user clicks it.The system does not bring this window to the foreground when the user minimizes or closes the foreground window.
-        // The window should not be activated through programmatic access or via keyboard navigation by accessible technology, such as Narrator.
-        // To activate the window, use the SetActiveWindow or SetForegroundWindow function.
-        // The window does not appear on the taskbar by default.To force the window to appear on the taskbar, use the WS_EX_APPWINDOW style.
-        WS_EX_NOINHERITLAYOUT = 0x00100000L,
-
-        // The window does not pass its window layout to its child windows.
-        WS_EX_NOPARENTNOTIFY = 0x00000004L,
-
-        // The child window created with this style does not send the WM_PARENTNOTIFY message to its parent window when it is created or destroyed.
-        WS_EX_NOREDIRECTIONBITMAP = 0x00200000L,
-
-        // The window does not render to a redirection surface.This is
-        // for windows that do not have visible content or that use mechanisms other than surfaces to provide their visual.
-        WS_EX_OVERLAPPEDWINDOW = WS_EX_WINDOWEDGE | WS_EX_CLIENTEDGE,
-
-        // The window is an overlapped window.
-        WS_EX_PALETTEWINDOW = WS_EX_WINDOWEDGE | WS_EX_TOOLWINDOW | WS_EX_TOPMOST,
-
-        // The window is palette window, which is a modeless dialog box that presents an array of commands.
-        WS_EX_RIGHT = 0x00001000L,
-
-        // The window has generic "right-aligned"
-        // properties.This depends on the window class.This style has an effect only
-        // if the shell language is Hebrew, Arabic, or another language that supports reading - order alignment;
-        // otherwise, the style is ignored.
-        // Using the WS_EX_RIGHT style
-        // for static or edit controls has the same effect as using the SS_RIGHT or ES_RIGHT style, respectively.Using this style with button controls has the same effect as using BS_RIGHT and BS_RIGHTBUTTON styles.
-        WS_EX_RIGHTSCROLLBAR = 0x00000000L,
-
-        // The vertical scroll bar (
-        // if present) is to the right of the client area.This is the default.
-        WS_EX_RTLREADING = 0x00002000L,
-
-        // If the shell language is Hebrew, Arabic, or another language that supports reading - order alignment, the window text is displayed using right - to - left reading - order properties.For other languages, the style is ignored.
-        WS_EX_STATICEDGE = 0x00020000L,
-
-        // The window has a three - dimensional border style intended to be used
-        // for items that do not accept user input.
-        WS_EX_TOOLWINDOW = 0x00000080L,
-
-        // The window is intended to be used as a floating toolbar.A tool window has a title bar that is shorter than a normal title bar, and the window title is drawn using a smaller font.A tool window does not appear in the taskbar or in the dialog that appears when the user presses ALT + TAB.If a tool window has a system menu, its icon is not displayed on the title bar.However, you can display the system menu by right - clicking or by typing ALT + SPACE.
-        WS_EX_TOPMOST = 0x00000008L,
-
-        // The window should be placed above all non - topmost windows and should stay above them, even when the window is deactivated.To add or remove this style, use the SetWindowPos function.
-        WS_EX_TRANSPARENT = 0x00000020L,
-
-        // The window should not be painted until siblings beneath the window (that were created by the same thread) have been painted.The window appears transparent because the bits of underlying sibling windows have already been painted.
-        // To achieve transparency without these restrictions, use the SetWindowRgn function.
-        WS_EX_WINDOWEDGE = 0x00000100L,
-        // The window has a border with a raised edge.
-    }
-
-    [Flags]
-    public enum SetWindowLongIndex : int
-    {
-        GWL_EXSTYLE = -20,
-        GWL_HINSTANCE = -6,
-        GWL_ID = -12,
-        GWL_STYLE = -16,
-        GWL_USERDATA = -21,
-        GWL_WNDPROC = -4
-    }
-
-    // 热键相关
-    //定义了辅助键的名称（将数字转变为字符以便于记忆，也可去除此枚举而直接使用数值）
-    [Flags()]
-    public enum KeyModifiers
-    {
-        None = 0,
-        Alt = 1,
-        Ctrl = 2,
-        Shift = 4,
-        WindowsKey = 8
     }
 }
