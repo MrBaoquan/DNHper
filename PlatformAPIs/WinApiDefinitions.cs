@@ -123,6 +123,18 @@ namespace DNHper
         [DllImport("Dwmapi.dll")]
         public static extern uint DwmExtendFrameIntoClientArea(IntPtr hWnd, ref MARGINS margins);
     }
+
+    internal static class Ole32
+    {
+        [DllImport("ole32.dll")]
+        public static extern int CoInitialize(IntPtr pvReserved);
+
+        [DllImport("ole32.dll")]
+        public static extern void CoUninitialize();
+
+        [DllImport("ole32.dll")]
+        public static extern int CoCreateInstance(ref Guid rclsid, IntPtr pUnkOuter, uint dwClsContext, ref Guid riid, out IntPtr ppv);
+    }
     #endregion
 
     #region Structures
@@ -186,6 +198,26 @@ namespace DNHper
         public string szDevice;
     }
 
+    [StructLayout(LayoutKind.Sequential)]
+    public struct PROPERTYKEY
+    {
+        public Guid fmtid;
+        public uint pid;
+    }
+
+    [StructLayout(LayoutKind.Explicit)]
+    public struct PROPVARIANT
+    {
+        [FieldOffset(0)]
+        public ushort vt;
+
+        [FieldOffset(8)]
+        public IntPtr pwszVal;
+
+        [FieldOffset(8)]
+        public uint uintVal;
+    }
+
     internal static class InputHelper
     {
         const int INPUT_MOUSE = 0;
@@ -196,6 +228,101 @@ namespace DNHper
                 type = INPUT_MOUSE,
                 mi = new MOUSEINPUT { dwFlags = (uint)flags }
             };
+    }
+    #endregion
+
+    #region Audio Interfaces
+    [ComImport]
+    [Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
+    internal class MMDeviceEnumeratorComObject { }
+
+    [ComImport]
+    [Guid("A95664D2-9614-4F35-A746-DE8DB63617E6")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface IMMDeviceEnumerator
+    {
+        int EnumAudioEndpoints(DataFlow dataFlow, DeviceState dwStateMask, out IMMDeviceCollection ppDevices);
+        int GetDefaultAudioEndpoint(DataFlow dataFlow, Role role, out IMMDevice ppEndpoint);
+        int GetDevice(string pwstrId, out IMMDevice ppDevice);
+        int RegisterEndpointNotificationCallback(IMMNotificationClient pClient);
+        int UnregisterEndpointNotificationCallback(IMMNotificationClient pClient);
+    }
+
+    [ComImport]
+    [Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface IMMDeviceCollection
+    {
+        int GetCount(out uint pcDevices);
+        int Item(uint nDevice, out IMMDevice ppDevice);
+    }
+
+    [ComImport]
+    [Guid("D666063F-1587-4E43-81F1-B948E807363F")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface IMMDevice
+    {
+        int Activate(ref Guid iid, uint dwClsCtx, IntPtr pActivationParams, out IntPtr ppInterface);
+        int OpenPropertyStore(uint stgmAccess, out IPropertyStore ppProperties);
+        int GetId(out string ppstrId);
+        int GetState(out DeviceState pdwState);
+    }
+
+    [ComImport]
+    [Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface IPropertyStore
+    {
+        int GetCount(out uint cProps);
+        int GetAt(uint iProp, out PROPERTYKEY pkey);
+        int GetValue(ref PROPERTYKEY key, out PROPVARIANT pv);
+        int SetValue(ref PROPERTYKEY key, ref PROPVARIANT propvar);
+        int Commit();
+    }
+
+    [ComImport]
+    [Guid("5CDF2C82-841E-4546-9722-0CF74078229A")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface IAudioEndpointVolume
+    {
+        int RegisterControlChangeNotify(IAudioEndpointVolumeCallback pNotify);
+        int UnregisterControlChangeNotify(IAudioEndpointVolumeCallback pNotify);
+        int GetChannelCount(out uint pnChannelCount);
+        int SetMasterVolumeLevel(float fLevelDB, ref Guid pguidEventContext);
+        int SetMasterVolumeLevelScalar(float fLevel, ref Guid pguidEventContext);
+        int GetMasterVolumeLevel(out float pfLevelDB);
+        int GetMasterVolumeLevelScalar(out float pfLevel);
+        int SetChannelVolumeLevel(uint nChannel, float fLevelDB, ref Guid pguidEventContext);
+        int SetChannelVolumeLevelScalar(uint nChannel, float fLevel, ref Guid pguidEventContext);
+        int GetChannelVolumeLevel(uint nChannel, out float pfLevelDB);
+        int GetChannelVolumeLevelScalar(uint nChannel, out float pfLevel);
+        int SetMute(bool bMute, ref Guid pguidEventContext);
+        int GetMute(out bool pbMute);
+        int GetVolumeStepInfo(out uint pnStep, out uint pnStepCount);
+        int VolumeStepUp(ref Guid pguidEventContext);
+        int VolumeStepDown(ref Guid pguidEventContext);
+        int QueryHardwareSupport(out uint pdwHardwareSupportMask);
+        int GetVolumeRange(out float pflVolumeMindB, out float pflVolumeMaxdB, out float pflVolumeIncrementdB);
+    }
+
+    [ComImport]
+    [Guid("657804FA-D6AD-4496-8A60-352752AF4F89")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface IAudioEndpointVolumeCallback
+    {
+        int OnNotify(IntPtr pNotifyData);
+    }
+
+    [ComImport]
+    [Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0")]
+    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    internal interface IMMNotificationClient
+    {
+        int OnDeviceStateChanged(string pwstrDeviceId, DeviceState dwNewState);
+        int OnDeviceAdded(string pwstrDeviceId);
+        int OnDeviceRemoved(string pwstrDeviceId);
+        int OnDefaultDeviceChanged(DataFlow flow, Role role, string pwstrDefaultDeviceId);
+        int OnPropertyValueChanged(string pwstrDeviceId, PROPERTYKEY key);
     }
     #endregion
 
@@ -417,6 +544,87 @@ namespace DNHper
         /// 激活并置前
         /// </summary>
         Activate
+    }
+
+    public enum DataFlow
+    {
+        Render,
+        Capture,
+        All
+    }
+
+    public enum Role
+    {
+        Console,
+        Multimedia,
+        Communications
+    }
+
+    public enum DeviceState : uint
+    {
+        Active = 0x00000001,
+        Disabled = 0x00000002,
+        NotPresent = 0x00000004,
+        Unplugged = 0x00000008,
+        All = 0x0000000F
+    }
+
+    public enum AudioDeviceType
+    {
+        Playback,
+        Recording
+    }
+
+    /// <summary>
+    /// 音量操作枚举
+    /// </summary>
+    public enum VolumeAction
+    {
+        /// <summary>
+        /// 设置音量 (0.0-1.0)
+        /// </summary>
+        SetVolume,
+
+        /// <summary>
+        /// 设置音量百分比 (0-100)
+        /// </summary>
+        SetVolumePercent,
+
+        /// <summary>
+        /// 静音
+        /// </summary>
+        Mute,
+
+        /// <summary>
+        /// 取消静音
+        /// </summary>
+        Unmute,
+
+        /// <summary>
+        /// 切换静音状态
+        /// </summary>
+        ToggleMute,
+
+        /// <summary>
+        /// 音量增加
+        /// </summary>
+        VolumeUp,
+
+        /// <summary>
+        /// 音量减少
+        /// </summary>
+        VolumeDown
+    }
+    #endregion
+
+    #region Audio Constants
+    public static class AudioConstants
+    {
+        public static readonly Guid IID_IAudioEndpointVolume = new Guid("5CDF2C82-841E-4546-9722-0CF74078229A");
+        public static readonly Guid CLSID_MMDeviceEnumerator = new Guid("BCDE0395-E52F-467C-8E3D-C4579291692E");
+        public static readonly Guid IID_IMMDeviceEnumerator = new Guid("A95664D2-9614-4F35-A746-DE8DB63617E6");
+        public static readonly Guid GUID_NULL = Guid.Empty;
+        public const uint CLSCTX_ALL = 23;
     }
     #endregion
 }

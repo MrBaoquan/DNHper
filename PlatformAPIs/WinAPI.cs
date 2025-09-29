@@ -458,6 +458,345 @@ namespace DNHper
         public static bool ShutdownBlockReasonDestroy(IntPtr hWnd) => User32.ShutdownBlockReasonDestroy(hWnd);
         #endregion
 
+        #region Audio Operations
+        private static IMMDeviceEnumerator _deviceEnumerator;
+        private static IAudioEndpointVolume _audioEndpointVolume;
+        private static bool _audioInitialized = false;
+
+        /// <summary>
+        /// 初始化音频系统
+        /// </summary>
+        private static bool InitializeAudio()
+        {
+            if (_audioInitialized && _audioEndpointVolume != null)
+                return true;
+
+            try
+            {
+                // 初始化 COM
+                Ole32.CoInitialize(IntPtr.Zero);
+
+                // 创建设备枚举器
+                var clsid = AudioConstants.CLSID_MMDeviceEnumerator;
+                var iid = AudioConstants.IID_IMMDeviceEnumerator;
+
+                int hr = Ole32.CoCreateInstance(ref clsid, IntPtr.Zero, AudioConstants.CLSCTX_ALL, ref iid, out IntPtr deviceEnumeratorPtr);
+
+                if (hr != 0 || deviceEnumeratorPtr == IntPtr.Zero)
+                    return false;
+
+                _deviceEnumerator = Marshal.GetObjectForIUnknown(deviceEnumeratorPtr) as IMMDeviceEnumerator;
+                Marshal.Release(deviceEnumeratorPtr);
+
+                if (_deviceEnumerator == null)
+                    return false;
+
+                // 获取默认音频设备
+                hr = _deviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia, out IMMDevice device);
+                if (hr != 0 || device == null)
+                    return false;
+
+                // 激活音量控制接口
+                var audioEndpointVolumeIid = AudioConstants.IID_IAudioEndpointVolume;
+                hr = device.Activate(ref audioEndpointVolumeIid, AudioConstants.CLSCTX_ALL, IntPtr.Zero, out IntPtr audioEndpointVolumePtr);
+
+                if (hr != 0 || audioEndpointVolumePtr == IntPtr.Zero)
+                    return false;
+
+                _audioEndpointVolume = Marshal.GetObjectForIUnknown(audioEndpointVolumePtr) as IAudioEndpointVolume;
+                Marshal.Release(audioEndpointVolumePtr);
+
+                _audioInitialized = _audioEndpointVolume != null;
+                return _audioInitialized;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"音频初始化失败: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 清理音频资源
+        /// </summary>
+        public static void CleanupAudio()
+        {
+            try
+            {
+                if (_audioEndpointVolume != null)
+                {
+                    Marshal.ReleaseComObject(_audioEndpointVolume);
+                    _audioEndpointVolume = null;
+                }
+
+                if (_deviceEnumerator != null)
+                {
+                    Marshal.ReleaseComObject(_deviceEnumerator);
+                    _deviceEnumerator = null;
+                }
+
+                _audioInitialized = false;
+                Ole32.CoUninitialize();
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"音频清理失败: {ex.Message}");
+            }
+        }
+
+        /// <summary>
+        /// 设置系统主音量 (0.0 - 1.0)
+        /// </summary>
+        /// <param name="volume">音量级别，范围 0.0 到 1.0</param>
+        /// <returns>设置是否成功</returns>
+        public static bool SetMasterVolume(float volume)
+        {
+            if (!InitializeAudio())
+                return false;
+
+            try
+            {
+                // 确保音量在有效范围内
+                volume = Math.Max(0.0f, Math.Min(1.0f, volume));
+
+                var guid = AudioConstants.GUID_NULL;
+                int hr = _audioEndpointVolume.SetMasterVolumeLevelScalar(volume, ref guid);
+                return hr == 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"设置音量失败: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 获取系统主音量 (0.0 - 1.0)
+        /// </summary>
+        /// <returns>当前音量级别，失败时返回 -1</returns>
+        public static float GetMasterVolume()
+        {
+            if (!InitializeAudio())
+                return -1;
+
+            try
+            {
+                int hr = _audioEndpointVolume.GetMasterVolumeLevelScalar(out float volume);
+                return hr == 0 ? volume : -1;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取音量失败: {ex.Message}");
+                return -1;
+            }
+        }
+
+        /// <summary>
+        /// 设置系统主音量 (0 - 100)
+        /// </summary>
+        /// <param name="volumePercent">音量百分比，范围 0 到 100</param>
+        /// <returns>设置是否成功</returns>
+        public static bool SetMasterVolumePercent(int volumePercent)
+        {
+            volumePercent = Math.Max(0, Math.Min(100, volumePercent));
+            return SetMasterVolume(volumePercent / 100.0f);
+        }
+
+        /// <summary>
+        /// 获取系统主音量 (0 - 100)
+        /// </summary>
+        /// <returns>当前音量百分比，失败时返回 -1</returns>
+        public static int GetMasterVolumePercent()
+        {
+            float volume = GetMasterVolume();
+            return volume >= 0 ? (int)Math.Round(volume * 100) : -1;
+        }
+
+        /// <summary>
+        /// 设置静音状态
+        /// </summary>
+        /// <param name="mute">是否静音</param>
+        /// <returns>设置是否成功</returns>
+        public static bool SetMute(bool mute)
+        {
+            if (!InitializeAudio())
+                return false;
+
+            try
+            {
+                var guid = AudioConstants.GUID_NULL;
+                int hr = _audioEndpointVolume.SetMute(mute, ref guid);
+                return hr == 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"设置静音失败: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 获取静音状态
+        /// </summary>
+        /// <returns>是否静音，失败时返回 null</returns>
+        public static bool? GetMute()
+        {
+            if (!InitializeAudio())
+                return null;
+
+            try
+            {
+                int hr = _audioEndpointVolume.GetMute(out bool mute);
+                return hr == 0 ? mute : null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取静音状态失败: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 切换静音状态
+        /// </summary>
+        /// <returns>切换后的静音状态，失败时返回 null</returns>
+        public static bool? ToggleMute()
+        {
+            bool? currentMute = GetMute();
+            if (currentMute == null)
+                return null;
+
+            bool newMute = !currentMute.Value;
+            return SetMute(newMute) ? newMute : null;
+        }
+
+        /// <summary>
+        /// 音量步进增加
+        /// </summary>
+        /// <returns>操作是否成功</returns>
+        public static bool VolumeStepUp()
+        {
+            if (!InitializeAudio())
+                return false;
+
+            try
+            {
+                var guid = AudioConstants.GUID_NULL;
+                int hr = _audioEndpointVolume.VolumeStepUp(ref guid);
+                return hr == 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"音量步进增加失败: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 音量步进减少
+        /// </summary>
+        /// <returns>操作是否成功</returns>
+        public static bool VolumeStepDown()
+        {
+            if (!InitializeAudio())
+                return false;
+
+            try
+            {
+                var guid = AudioConstants.GUID_NULL;
+                int hr = _audioEndpointVolume.VolumeStepDown(ref guid);
+                return hr == 0;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"音量步进减少失败: {ex.Message}");
+                return false;
+            }
+        }
+
+        /// <summary>
+        /// 获取音量步进信息
+        /// </summary>
+        /// <returns>当前步进和总步进数，失败时返回 null</returns>
+        public static (uint currentStep, uint totalSteps)? GetVolumeStepInfo()
+        {
+            if (!InitializeAudio())
+                return null;
+
+            try
+            {
+                int hr = _audioEndpointVolume.GetVolumeStepInfo(out uint currentStep, out uint totalSteps);
+                return hr == 0 ? (currentStep, totalSteps) : null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取音量步进信息失败: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 获取音量范围信息 (分贝)
+        /// </summary>
+        /// <returns>最小、最大和增量分贝值，失败时返回 null</returns>
+        public static (float minDB, float maxDB, float incrementDB)? GetVolumeRange()
+        {
+            if (!InitializeAudio())
+                return null;
+
+            try
+            {
+                int hr = _audioEndpointVolume.GetVolumeRange(out float minDB, out float maxDB, out float incrementDB);
+                return hr == 0 ? (minDB, maxDB, incrementDB) : null;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"获取音量范围失败: {ex.Message}");
+                return null;
+            }
+        }
+
+        /// <summary>
+        /// 获取系统音频信息
+        /// </summary>
+        /// <returns>音频系统信息</returns>
+        public static AudioSystemInfo GetAudioSystemInfo()
+        {
+            var info = new AudioSystemInfo
+            {
+                IsInitialized = _audioInitialized,
+                Volume = GetMasterVolume(),
+                VolumePercent = GetMasterVolumePercent(),
+                IsMuted = GetMute(),
+                VolumeStepInfo = GetVolumeStepInfo(),
+                VolumeRange = GetVolumeRange()
+            };
+
+            return info;
+        }
+
+        /// <summary>
+        /// 智能音量控制
+        /// </summary>
+        /// <param name="action">音量操作</param>
+        /// <param name="value">操作值（用于设置音量时）</param>
+        /// <returns>操作是否成功</returns>
+        public static bool SmartVolumeControl(VolumeAction action, float value = 0)
+        {
+            return action switch
+            {
+                VolumeAction.SetVolume => SetMasterVolume(value),
+                VolumeAction.SetVolumePercent => SetMasterVolumePercent((int)value),
+                VolumeAction.Mute => SetMute(true),
+                VolumeAction.Unmute => SetMute(false),
+                VolumeAction.ToggleMute => ToggleMute() != null,
+                VolumeAction.VolumeUp => VolumeStepUp(),
+                VolumeAction.VolumeDown => VolumeStepDown(),
+                _ => false
+            };
+        }
+        #endregion
+
         #region Constants
         public const int MOUSEEVENTF_LEFTDOWN = 0x2,
             MOUSEEVENTF_LEFTUP = 0x4,
@@ -539,6 +878,41 @@ namespace DNHper
                 for (int i = 0; i < Monitors.Count; i++)
                     sb.AppendLine($"    [{i + 1}] {Monitors[i]}");
             }
+            return sb.ToString();
+        }
+    }
+
+    /// <summary>
+    /// 音频系统信息类
+    /// </summary>
+    public class AudioSystemInfo
+    {
+        public bool IsInitialized { get; set; }
+        public float Volume { get; set; }
+        public int VolumePercent { get; set; }
+        public bool? IsMuted { get; set; }
+        public (uint currentStep, uint totalSteps)? VolumeStepInfo { get; set; }
+        public (float minDB, float maxDB, float incrementDB)? VolumeRange { get; set; }
+
+        public override string ToString()
+        {
+            var sb = new StringBuilder();
+            sb.AppendLine("音频系统信息:");
+            sb.AppendLine($"  初始化状态: {(IsInitialized ? "已初始化" : "未初始化")}");
+            sb.AppendLine($"  当前音量: {Volume:F2} ({VolumePercent}%)");
+            sb.AppendLine($"  静音状态: {(IsMuted?.ToString() ?? "未知")}");
+
+            if (VolumeStepInfo.HasValue)
+            {
+                sb.AppendLine($"  音量步进: {VolumeStepInfo.Value.currentStep}/{VolumeStepInfo.Value.totalSteps}");
+            }
+
+            if (VolumeRange.HasValue)
+            {
+                var range = VolumeRange.Value;
+                sb.AppendLine($"  音量范围: {range.minDB:F1}dB 到 {range.maxDB:F1}dB (增量: {range.incrementDB:F1}dB)");
+            }
+
             return sb.ToString();
         }
     }
