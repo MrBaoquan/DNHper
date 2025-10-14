@@ -77,12 +77,11 @@ namespace DNHper
         public static extern bool UnregisterHotKey(IntPtr hWnd, int id);
 
         [DllImport("user32.dll", CharSet = CharSet.Unicode, SetLastError = true)]
-        public extern static bool ShutdownBlockReasonCreate([In] IntPtr hWnd, [In] string pwszReason);
+        public extern static bool ShutdownBlockReasonCreate(IntPtr hWnd, string pwszReason);
 
         [DllImport("user32.dll", SetLastError = true)]
-        public extern static bool ShutdownBlockReasonDestroy([In] IntPtr hWnd);
+        public extern static bool ShutdownBlockReasonDestroy(IntPtr hWnd);
 
-        // 显示器相关API
         [DllImport("user32.dll")]
         public static extern bool EnumDisplayMonitors(IntPtr hdc, IntPtr lprcClip, MonitorEnumDelegate lpfnEnum, IntPtr dwData);
 
@@ -98,7 +97,6 @@ namespace DNHper
         [DllImport("user32.dll")]
         public static extern int GetSystemMetrics(SystemMetric smIndex);
 
-        // 新增的窗口控制相关API
         [DllImport("user32.dll")]
         [return: MarshalAs(UnmanagedType.Bool)]
         public static extern bool IsWindowVisible(IntPtr hWnd);
@@ -190,8 +188,8 @@ namespace DNHper
     public struct MONITORINFOEX
     {
         public int cbSize;
-        public RECT rcMonitor;
-        public RECT rcWork;
+        public RECT rcMonitor,
+            rcWork;
         public uint dwFlags;
 
         [MarshalAs(UnmanagedType.ByValTStr, SizeConst = 32)]
@@ -232,13 +230,10 @@ namespace DNHper
     #endregion
 
     #region Audio Interfaces
-    [ComImport]
-    [Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
+    [ComImport, Guid("BCDE0395-E52F-467C-8E3D-C4579291692E")]
     internal class MMDeviceEnumeratorComObject { }
 
-    [ComImport]
-    [Guid("A95664D2-9614-4F35-A746-DE8DB63617E6")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [ComImport, Guid("A95664D2-9614-4F35-A746-DE8DB63617E6"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IMMDeviceEnumerator
     {
         int EnumAudioEndpoints(DataFlow dataFlow, DeviceState dwStateMask, out IMMDeviceCollection ppDevices);
@@ -248,18 +243,14 @@ namespace DNHper
         int UnregisterEndpointNotificationCallback(IMMNotificationClient pClient);
     }
 
-    [ComImport]
-    [Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [ComImport, Guid("0BD7A1BE-7A1A-44DB-8397-CC5392387B5E"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IMMDeviceCollection
     {
         int GetCount(out uint pcDevices);
         int Item(uint nDevice, out IMMDevice ppDevice);
     }
 
-    [ComImport]
-    [Guid("D666063F-1587-4E43-81F1-B948E807363F")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [ComImport, Guid("D666063F-1587-4E43-81F1-B948E807363F"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IMMDevice
     {
         int Activate(ref Guid iid, uint dwClsCtx, IntPtr pActivationParams, out IntPtr ppInterface);
@@ -268,9 +259,7 @@ namespace DNHper
         int GetState(out DeviceState pdwState);
     }
 
-    [ComImport]
-    [Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [ComImport, Guid("886D8EEB-8CF2-4446-8D02-CDBA1DBDCF99"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IPropertyStore
     {
         int GetCount(out uint cProps);
@@ -280,9 +269,7 @@ namespace DNHper
         int Commit();
     }
 
-    [ComImport]
-    [Guid("5CDF2C82-841E-4546-9722-0CF74078229A")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [ComImport, Guid("5CDF2C82-841E-4546-9722-0CF74078229A"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IAudioEndpointVolume
     {
         int RegisterControlChangeNotify(IAudioEndpointVolumeCallback pNotify);
@@ -305,17 +292,13 @@ namespace DNHper
         int GetVolumeRange(out float pflVolumeMindB, out float pflVolumeMaxdB, out float pflVolumeIncrementdB);
     }
 
-    [ComImport]
-    [Guid("657804FA-D6AD-4496-8A60-352752AF4F89")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [ComImport, Guid("657804FA-D6AD-4496-8A60-352752AF4F89"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IAudioEndpointVolumeCallback
     {
         int OnNotify(IntPtr pNotifyData);
     }
 
-    [ComImport]
-    [Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0")]
-    [InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
+    [ComImport, Guid("7991EEC9-7E89-4D85-8390-6C703CEC60C0"), InterfaceType(ComInterfaceType.InterfaceIsIUnknown)]
     internal interface IMMNotificationClient
     {
         int OnDeviceStateChanged(string pwstrDeviceId, DeviceState dwNewState);
@@ -331,7 +314,7 @@ namespace DNHper
     {
         SW_HIDE = 0,
         SW_SHOWNORMAL = 1,
-        SW_NORMAL = SW_SHOWNORMAL,
+        SW_NORMAL = 1,
         SW_SHOWMINIMIZED = 2,
         SW_SHOWMAXIMIZED = 3,
         SW_SHOW = 5,
@@ -357,16 +340,16 @@ namespace DNHper
 
     public enum MonitorOptions : uint
     {
-        MONITOR_DEFAULTTONULL = 0x00000000,
-        MONITOR_DEFAULTTOPRIMARY = 0x00000001,
-        MONITOR_DEFAULTTONEAREST = 0x00000002
+        MONITOR_DEFAULTTONULL = 0,
+        MONITOR_DEFAULTTOPRIMARY = 1,
+        MONITOR_DEFAULTTONEAREST = 2
     }
 
     public enum SystemMetric : int
     {
-        SM_CMONITORS = 80, // 显示器数量
-        SM_CXVIRTUALSCREEN = 78, // 虚拟桌面宽度
-        SM_CYVIRTUALSCREEN = 79 // 虚拟桌面高度
+        SM_CMONITORS = 80,
+        SM_CXVIRTUALSCREEN = 78,
+        SM_CYVIRTUALSCREEN = 79
     }
 
     [Flags]
@@ -474,75 +457,23 @@ namespace DNHper
         WindowsKey = 8
     }
 
-    /// <summary>
-    /// 窗口状态枚举
-    /// </summary>
     public enum WindowState
     {
-        /// <summary>
-        /// 无效窗口
-        /// </summary>
         Invalid,
-
-        /// <summary>
-        /// 正常状态
-        /// </summary>
         Normal,
-
-        /// <summary>
-        /// 最小化状态
-        /// </summary>
         Minimized,
-
-        /// <summary>
-        /// 最大化状态
-        /// </summary>
         Maximized,
-
-        /// <summary>
-        /// 隐藏状态
-        /// </summary>
         Hidden
     }
 
-    /// <summary>
-    /// 窗口操作枚举
-    /// </summary>
     public enum WindowAction
     {
-        /// <summary>
-        /// 最大化
-        /// </summary>
         Maximize,
-
-        /// <summary>
-        /// 最小化
-        /// </summary>
         Minimize,
-
-        /// <summary>
-        /// 还原
-        /// </summary>
         Restore,
-
-        /// <summary>
-        /// 显示
-        /// </summary>
         Show,
-
-        /// <summary>
-        /// 隐藏
-        /// </summary>
         Hide,
-
-        /// <summary>
-        /// 切换状态
-        /// </summary>
         Toggle,
-
-        /// <summary>
-        /// 激活并置前
-        /// </summary>
         Activate
     }
 
@@ -575,44 +506,14 @@ namespace DNHper
         Recording
     }
 
-    /// <summary>
-    /// 音量操作枚举
-    /// </summary>
     public enum VolumeAction
     {
-        /// <summary>
-        /// 设置音量 (0.0-1.0)
-        /// </summary>
         SetVolume,
-
-        /// <summary>
-        /// 设置音量百分比 (0-100)
-        /// </summary>
         SetVolumePercent,
-
-        /// <summary>
-        /// 静音
-        /// </summary>
         Mute,
-
-        /// <summary>
-        /// 取消静音
-        /// </summary>
         Unmute,
-
-        /// <summary>
-        /// 切换静音状态
-        /// </summary>
         ToggleMute,
-
-        /// <summary>
-        /// 音量增加
-        /// </summary>
         VolumeUp,
-
-        /// <summary>
-        /// 音量减少
-        /// </summary>
         VolumeDown
     }
     #endregion
