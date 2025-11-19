@@ -68,70 +68,26 @@ namespace DNHper
             {
                 if (_logger == null)
                 {
-                    _logger = NLog.LogManager.GetCurrentClassLogger();
+                    _logger = LogManager.GetCurrentClassLogger();
                 }
                 return _logger;
             }
         }
 
-        public static void Info(object InMessage)
-        {
-            logger.Info(InMessage);
-        }
-
-        public static void Info(string InMessage)
-        {
-            logger.Info(InMessage);
-        }
-
-        public static void Info(string InFormat, params object[] InParams)
-        {
-            logger.Info(InFormat, InParams);
-        }
-
-        public static void Debug(object InMessage)
-        {
-            logger.Debug(InMessage);
-        }
-
-        public static void Debug(string InMessage)
-        {
-            logger.Debug(InMessage);
-        }
-
-        public static void Debug(string InFormat, params object[] InParams)
-        {
-            logger.Debug(InFormat, InParams);
-        }
-
-        public static void Warn(string InMessage)
-        {
-            logger.Warn(InMessage);
-        }
-
-        public static void Warn(string InFormat, params object[] InParams)
-        {
-            logger.Warn(InFormat, InParams);
-        }
-
-        public static void Error(string InMessage)
-        {
-            logger.Error(InMessage);
-        }
-
-        public static void Error(string InFormat, params object[] InParams)
-        {
-            logger.Error(InFormat, InParams);
-        }
-
-        public static void Error(Exception InEx, string InMessage = "")
-        {
-            logger.Error(InEx, InMessage);
-        }
-
+        /// <summary>
+        /// 初始化日志配置，包含FileTarget和MemoryTarget
+        /// </summary>
         public static void Initialize()
         {
+            // 确保日志目录存在
+            if (!Directory.Exists(LogFileDir))
+            {
+                Directory.CreateDirectory(LogFileDir);
+            }
+
             var config = new NLog.Config.LoggingConfiguration();
+
+            // 文件日志目标
             var logfile = new NLog.Targets.FileTarget("logfile")
             {
                 FileName = LogFilePath,
@@ -139,41 +95,81 @@ namespace DNHper
                 ArchiveOldFileOnStartup = true,
                 MaxArchiveFiles = 10,
                 ArchiveEvery = NLog.Targets.FileArchivePeriod.Day,
-                Layout =
-                    "${longdate} ${level} ${message} ${exception:format=Message} ${exception:format=StackTrace:exceptionDataSeparator=\r\n}"
+                Layout = "${longdate} [${level}] - ${message} ${exception:format=ToString}"
             };
-            config.AddRule(LogLevel.Trace, LogLevel.Fatal, logfile);
 
-            var _memoryTarget = new NLog.Targets.MemoryTarget("memoryTarget")
+            // 内存日志目标
+            var memoryTarget = new NLog.Targets.MemoryTarget("memoryTarget")
             {
-                Layout =
-                    "${longdate} [${level}]: ${message} ${exception:format=Message} ${exception:format=StackTrace:exceptionDataSeparator=\r\n}"
+                Layout = "${longdate} [${level}] - ${message} ${exception:format=ToString}"
             };
-            config.AddRule(LogLevel.Trace, LogLevel.Fatal, _memoryTarget);
-            NLog.LogManager.Configuration = config;
+
+            // 添加targets
+            config.AddTarget(logfile);
+            config.AddTarget(memoryTarget);
+
+            // 设置规则，所有日志同时写入文件和内存
+            config.AddRuleForAllLevels(logfile);
+            config.AddRuleForAllLevels(memoryTarget);
+
+            // 应用配置
+            LogManager.Configuration = config;
         }
 
-        public static List<string> FetchMessage(int MsgCount = -1)
+        /// <summary>
+        /// 获取内存中缓存的日志消息，可以指定数量，默认全部
+        /// </summary>
+        /// <param name="msgCount">要获取的最近日志条数，默认为全部</param>
+        /// <returns>日志文本列表</returns>
+        public static List<string> FetchMessage(int msgCount = -1)
         {
-            var _memoryTarget =
+            var memoryTarget =
                 LogManager.Configuration?.FindTargetByName<NLog.Targets.MemoryTarget>(
                     "memoryTarget"
                 );
-            if (_memoryTarget == null)
+            if (memoryTarget == null)
             {
+                // 内存目标未找到，返回空列表
                 return new List<string>();
             }
-            var _messages = _memoryTarget.Logs.ToList();
-            if (MsgCount > 0)
+
+            var allMessages = memoryTarget.Logs;
+            if (msgCount > 0 && allMessages.Count > msgCount)
             {
-                return _messages.Skip(Math.Max(_messages.Count - MsgCount, 0)).ToList();
+                return allMessages.Skip(allMessages.Count - msgCount).ToList();
             }
-            return _messages;
+
+            return new List<string>(allMessages);
         }
 
+        // 简单封装日志写入接口
+        public static void Info(string message) => logger.Info(message);
+
+        public static void Info(string format, params object[] args) => logger.Info(format, args);
+
+        public static void Debug(string message) => logger.Debug(message);
+
+        public static void Debug(string format, params object[] args) => logger.Debug(format, args);
+
+        public static void Warn(string message) => logger.Warn(message);
+
+        public static void Warn(string format, params object[] args) => logger.Warn(format, args);
+
+        public static void Error(string message) => logger.Error(message);
+
+        public static void Error(string format, params object[] args) => logger.Error(format, args);
+
+        public static void Fatal(string message) => logger.Fatal(message);
+
+        public static void Fatal(string format, params object[] args) => logger.Fatal(format, args);
+
+        /// <summary>
+        /// 关闭日志管理器释放资源
+        /// </summary>
         public static void Shutdown()
         {
-            NLog.LogManager.Shutdown();
+            LogManager.Shutdown();
+            _logger = null;
         }
     }
 }

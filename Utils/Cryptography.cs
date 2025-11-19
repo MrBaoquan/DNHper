@@ -171,7 +171,7 @@ namespace DNHper
         /// <returns>Decrypted bytes.</returns>
         public static byte[] Decrypt(byte[] input, RSAParameters key)
         {
-            using var rsa = System.Security.Cryptography.RSA.Create(key);
+            using var rsa = System.Security.Cryptography.RSA.Create(key.ToString());
 
             var bytes = rsa.Decrypt(
                 input,
@@ -207,7 +207,7 @@ namespace DNHper
         /// <returns>Encrypted bytes.</returns>
         public static byte[] Encrypt(byte[] input, RSAParameters key)
         {
-            using var rsa = System.Security.Cryptography.RSA.Create(key);
+            using var rsa = System.Security.Cryptography.RSA.Create(key.ToString());
 
             var bytes = rsa.Encrypt(
                 input,

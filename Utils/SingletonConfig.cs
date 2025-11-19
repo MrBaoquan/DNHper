@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Xml.Serialization;
 
-
 namespace DNHper
 {
-    public class SingletonConfig<T> : Singleton<T> where T : class, new()
+    public class SingletonConfig<T> : Singleton<T>
+        where T : class, new()
     {
         [XmlIgnore]
         public string FilePath { get; private set; } = string.Empty;
@@ -20,15 +20,23 @@ namespace DNHper
 #pragma warning restore CS8603 // 可能返回 null 引用。
         }
 
-        public void Load()
+        public string Load()
         {
-            if(File.Exists(FilePath) == false)
-                   USerialization.SerializeXML(this,FilePath);
-
-            var loaded = USerialization.DeserializeXML<T>(FilePath);
-            if(loaded != null)
+            try
             {
-                CopyToSelf(loaded);
+                if (File.Exists(FilePath) == false)
+                    USerialization.SerializeXML(this, FilePath);
+
+                var loaded = USerialization.DeserializeXML<T>(FilePath);
+                if (loaded != null)
+                {
+                    CopyToSelf(loaded);
+                }
+                return string.Empty;
+            }
+            catch (Exception ex)
+            {
+                return ex.Message;
             }
         }
 
@@ -41,10 +49,9 @@ namespace DNHper
         {
             foreach (var property in other.GetType().GetProperties())
             {
-                if(property.CanWrite)
+                if (property.CanWrite)
                     property.SetValue(this, property.GetValue(other));
             }
         }
     }
-
 }

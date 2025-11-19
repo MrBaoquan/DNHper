@@ -1,5 +1,10 @@
 !*.meta
 !DNHper.asmdef.meta
 Applications/*.exe
+<<<<<<< HEAD
 bin/
 obj/
+=======
+obj
+bin
+>>>>>>> cf4c5caaa1c2de632e61e12c6fb399c623595851

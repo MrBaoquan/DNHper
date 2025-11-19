@@ -32,13 +32,11 @@ namespace DNHper
             return _value.Split(Split).Select(_hex => Convert.ToByte(_hex, 16)).ToArray();
         }
 
-        public static string ToHexString(this byte[] InData, bool bWithDash = true)
+        public static string ToHexString(this byte[] InData, char Split = ' ')
         {
             var _hexString = BitConverter.ToString(InData);
-            if (!bWithDash)
-            {
-                _hexString = _hexString.Replace("-", string.Empty);
-            }
+
+            _hexString = _hexString.Replace("-", Split.ToString());
             return _hexString;
         }
 
