@@ -12,13 +12,21 @@ namespace DNHper
 
         public static void ClickLeftMouseButton()
         {
-            var inputs = new[] { InputHelper.CreateMouseInput(MOUSEEVENTF_LEFTDOWN), InputHelper.CreateMouseInput(MOUSEEVENTF_LEFTUP) };
-            if (User32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>()) == 0)
-                Console.WriteLine("鼠标点击发送失败");
+            var inputs = new[]
+            {
+                InputHelper.CreateMouseInput(MOUSEEVENTF_LEFTDOWN),
+                InputHelper.CreateMouseInput(MOUSEEVENTF_LEFTUP)
+            };
+            User32.SendInput((uint)inputs.Length, inputs, Marshal.SizeOf<INPUT>());
         }
 
-        public static void mouse_event(int dwFlags, int dx, int dy, int cButtons, int dwExtraInfo) =>
-            User32.mouse_event(dwFlags, dx, dy, cButtons, dwExtraInfo);
+        public static void mouse_event(
+            int dwFlags,
+            int dx,
+            int dy,
+            int cButtons,
+            int dwExtraInfo
+        ) => User32.mouse_event(dwFlags, dx, dy, cButtons, dwExtraInfo);
         #endregion
     }
 }

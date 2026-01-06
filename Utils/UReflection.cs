@@ -39,12 +39,10 @@ namespace DNHper
                 );
                 return (T)_fieldInfo.GetValue(InTarget);
             }
-            catch (System.Exception ex)
+            catch (System.Exception)
             {
-                NLogger.Warn(InField);
-                NLogger.Error(ex.Message);
+                return default(T);
             }
-            return default(T);
         }
 
         public static bool SetFieldValue<T>(object InObject, string InField, T Value)
@@ -57,9 +55,8 @@ namespace DNHper
                 _fieldInfo.SetValue(InObject, _safeValue);
                 return true;
             }
-            catch (Exception exc)
+            catch (Exception)
             {
-                NLogger.Error(exc.Message);
                 return false;
             }
         }
@@ -76,9 +73,9 @@ namespace DNHper
                 object _safeValue = Convert.ChangeType(Value, _fieldInfo.FieldType);
                 _fieldInfo.SetValue(InTarget, _safeValue);
             }
-            catch (System.Exception ex)
+            catch (System.Exception)
             {
-                NLogger.Error(ex.Message);
+                // 静默失败
             }
         }
 
@@ -95,12 +92,10 @@ namespace DNHper
                     .GetMethod(InMethodName, BindingFlags.NonPublic | BindingFlags.Instance);
                 return _methodInfo?.Invoke(InTarget, InParams);
             }
-            catch (System.Exception ex)
+            catch (System.Exception)
             {
-                NLogger.Warn(InMethodName);
-                NLogger.Error(ex.Message);
+                return null;
             }
-            return null;
         }
 
         public static System.Type[] SubClasses(Type InBaseClass)

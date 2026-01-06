@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using System.Runtime.InteropServices;
 using System.Text;
 
 namespace DNHper
@@ -39,7 +40,9 @@ namespace DNHper
         public int ProcessId { get; set; }
 
         public override string ToString() =>
-            $"[{ProcessName}:{ProcessId}] {Title} - {State}" + (IsTopMost ? " [TopMost]" : "") + (IsHung ? " [Hung]" : "");
+            $"[{ProcessName}:{ProcessId}] {Title} - {State}"
+            + (IsTopMost ? " [TopMost]" : "")
+            + (IsHung ? " [Hung]" : "");
     }
 
     public class MonitorInfo
@@ -51,7 +54,8 @@ namespace DNHper
         public int Top { get; set; }
         public bool IsPrimary { get; set; }
 
-        public override string ToString() => $"{DeviceName}: {Width}x{Height} at ({Left},{Top}){(IsPrimary ? " [Primary]" : "")}";
+        public override string ToString() =>
+            $"{DeviceName}: {Width}x{Height} at ({Left},{Top}){(IsPrimary ? " [Primary]" : "")}";
     }
 
     public class ExtendedDesktopInfo
@@ -112,11 +116,15 @@ namespace DNHper
             sb.AppendLine($"  当前音量: {Volume:F2} ({VolumePercent}%)");
             sb.AppendLine($"  静音状态: {(IsMuted?.ToString() ?? "未知")}");
             if (VolumeStepInfo.HasValue)
-                sb.AppendLine($"  音量步进: {VolumeStepInfo.Value.currentStep}/{VolumeStepInfo.Value.totalSteps}");
+                sb.AppendLine(
+                    $"  音量步进: {VolumeStepInfo.Value.currentStep}/{VolumeStepInfo.Value.totalSteps}"
+                );
             if (VolumeRange.HasValue)
             {
                 var range = VolumeRange.Value;
-                sb.AppendLine($"  音量范围: {range.minDB:F1}dB 到 {range.maxDB:F1}dB (增量: {range.incrementDB:F1}dB)");
+                sb.AppendLine(
+                    $"  音量范围: {range.minDB:F1}dB 到 {range.maxDB:F1}dB (增量: {range.incrementDB:F1}dB)"
+                );
             }
             return sb.ToString();
         }
@@ -124,10 +132,28 @@ namespace DNHper
 
     public static class ProcessExtensions
     {
+        [DllImport("Kernel32.dll")]
+        [return: MarshalAs(UnmanagedType.Bool)]
+        private static extern bool QueryFullProcessImageName(
+            [In] IntPtr hProcess,
+            [In] uint dwFlags,
+            [Out] StringBuilder lpExeName,
+            [In, Out] ref uint lpdwSize
+        );
+
         public static string GetMainModuleFileName(this Process process)
         {
             try
             {
+                // 优先使用QueryFullProcessImageName，支持跨位数访问
+                var fileNameBuilder = new StringBuilder(1024);
+                uint bufferLength = (uint)fileNameBuilder.Capacity + 1;
+                if (QueryFullProcessImageName(process.Handle, 0, fileNameBuilder, ref bufferLength))
+                {
+                    return fileNameBuilder.ToString();
+                }
+
+                // 降级到MainModule（可能在跨位数时失败）
                 return process.MainModule?.FileName ?? string.Empty;
             }
             catch

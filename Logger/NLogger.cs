@@ -133,13 +133,15 @@ namespace DNHper
                 return new List<string>();
             }
 
-            var allMessages = memoryTarget.Logs;
-            if (msgCount > 0 && allMessages.Count > msgCount)
+            // 创建快照以避免并发问题
+            var snapshot = new List<string>(memoryTarget.Logs);
+
+            if (msgCount > 0 && snapshot.Count > msgCount)
             {
-                return allMessages.Skip(allMessages.Count - msgCount).ToList();
+                return snapshot.Skip(snapshot.Count - msgCount).ToList();
             }
 
-            return new List<string>(allMessages);
+            return snapshot;
         }
 
         // 简单封装日志写入接口

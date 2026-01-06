@@ -211,17 +211,10 @@ namespace DNHper
                     Marshal.ReleaseComObject(file);
                     Marshal.ReleaseComObject(link);
 
-                    bool exists = File.Exists(shortcutPath);
-                    if (!exists)
-                    {
-                        NLogger.Error($"快捷方式创建失败，文件不存在: {shortcutPath}");
-                    }
-
-                    return exists;
+                    return File.Exists(shortcutPath);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    NLogger.Error($"创建快捷方式失败: {ex.Message}\n{ex.StackTrace}");
                     return false;
                 }
             }
@@ -381,7 +374,6 @@ namespace DNHper
 
                     if (!File.Exists(shortcutPath))
                     {
-                        NLogger.Warn($"快捷方式不存在: {shortcutPath}");
                         return null;
                     }
 
@@ -400,9 +392,8 @@ namespace DNHper
 
                     return targetPath;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    NLogger.Error($"获取快捷方式目标失败: {ex.Message}");
                     return null;
                 }
             }

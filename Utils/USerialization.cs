@@ -74,13 +74,16 @@ namespace DNHper
 
                 using (var writer = XmlWriter.Create(path, settings))
                 {
-                    serializer.Serialize(writer, item, new XmlSerializerNamespaces(new[] { XmlQualifiedName.Empty }));
+                    serializer.Serialize(
+                        writer,
+                        item,
+                        new XmlSerializerNamespaces(new[] { XmlQualifiedName.Empty })
+                    );
                     // serializer.Serialize(writer, item);
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                NLogger.Error($"SerializeXML failed for path {path}: {e.Message}");
                 throw;
             }
         }
@@ -111,9 +114,8 @@ namespace DNHper
                     return (T)serializer.Deserialize(reader);
                 }
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                NLogger.Error($"DeserializeXML failed for path {path}: {e.Message}");
                 throw;
             }
         }
@@ -140,7 +142,11 @@ namespace DNHper
         /// <summary>
         /// 序列化为格式化的 XML（可读性优先）
         /// </summary>
-        public static void SerializeXMLFormatted(object item, string path, string indentChars = "    ")
+        public static void SerializeXMLFormatted(
+            object item,
+            string path,
+            string indentChars = "    "
+        )
         {
             var settings = new XmlWriterSettings
             {
@@ -202,9 +208,8 @@ namespace DNHper
                 byte[] bytes = MessagePackSerializer.Serialize(target);
                 File.WriteAllBytes(inPath, bytes);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                NLogger.Error($"SerializeObject failed for path {inPath}: {e.Message}");
                 throw;
             }
         }
@@ -223,7 +228,6 @@ namespace DNHper
 
             if (!File.Exists(inPath))
             {
-                NLogger.Warn($"File {inPath} not exists.");
                 return default;
             }
 
@@ -232,13 +236,11 @@ namespace DNHper
                 byte[] bytes = File.ReadAllBytes(inPath);
                 return MessagePackSerializer.Deserialize<T>(bytes);
             }
-            catch (Exception e)
+            catch (Exception)
             {
-                NLogger.Error($"DeserializeObject failed for path {inPath}: {e.Message}");
-                return default;
+                return null;
             }
         }
-
         #endregion
     }
 }
