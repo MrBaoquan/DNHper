@@ -31,52 +31,105 @@ namespace DNHper
             return result;
         }
 
-        public static Process FindProcess(string ProcessFileName) => FindProcesses(ProcessFileName).FirstOrDefault();
+        public static Process FindProcess(string ProcessFileName) =>
+            FindProcesses(ProcessFileName).FirstOrDefault();
 
         public static List<Process> FindProcesses(string ProcessFileName)
         {
             try
             {
-                var processes = Path.IsPathRooted(ProcessFileName)
-                    ? Process.GetProcessesByName(Path.GetFileNameWithoutExtension(ProcessFileName))
-                        .Where(p => p.GetMainModuleFileName() == ProcessFileName)
-                    : Process.GetProcesses().Where(p => p.ProcessName.Equals(ProcessFileName, StringComparison.OrdinalIgnoreCase));
-                return processes.ToList();
+                var processNameToFind = Path.GetFileNameWithoutExtension(ProcessFileName);
+
+                if (Path.IsPathRooted(ProcessFileName))
+                {
+                    // 完整路径：先按进程名获取，再按完整路径过滤
+                    var allByName = Process.GetProcessesByName(processNameToFind);
+
+                    var result = new List<Process>();
+                    foreach (var p in allByName)
+                    {
+                        var actualPath = p.GetMainModuleFileName();
+                        var pathsMatch = string.Equals(
+                            actualPath,
+                            ProcessFileName,
+                            StringComparison.OrdinalIgnoreCase
+                        );
+
+                        if (pathsMatch)
+                        {
+                            result.Add(p);
+                        }
+                    }
+
+                    return result;
+                }
+                else
+                {
+                    // 只有文件名：按进程名匹配（已去除.exe）
+                    var processes = Process
+                        .GetProcesses()
+                        .Where(
+                            p =>
+                                p.ProcessName.Equals(
+                                    processNameToFind,
+                                    StringComparison.OrdinalIgnoreCase
+                                )
+                        );
+                    var result = processes.ToList();
+                    return result;
+                }
             }
-            catch (Exception e)
+            catch (Exception ex)
             {
-                Console.WriteLine(e.Message);
+                NLogger.Error("[FindProcesses] 查找进程异常: {0}", ex.Message);
                 return new List<Process>();
             }
         }
 
-        public static void KillProcesses(string ProcessFileName) => FindProcesses(ProcessFileName).ForEach(p => p.Kill());
+        public static void KillProcesses(string ProcessFileName) =>
+            FindProcesses(ProcessFileName).ForEach(p => p.Kill());
 
-        public static bool OpenProcess(string Path, string Args = "", bool runas = false, bool noWindow = false) =>
-            CheckValidExecutableFile(Path) && TryStartProcess(new ProcessStartInfo
-            {
-                FileName = Path,
-                Arguments = Args,
-                CreateNoWindow = noWindow,
-                WorkingDirectory = System.IO.Path.GetDirectoryName(Path),
-                Verb = runas ? "runas" : ""
-            });
+        public static bool OpenProcess(
+            string Path,
+            string Args = "",
+            bool runas = false,
+            bool noWindow = false
+        ) =>
+            CheckValidExecutableFile(Path)
+            && TryStartProcess(
+                new ProcessStartInfo
+                {
+                    FileName = Path,
+                    Arguments = Args,
+                    CreateNoWindow = noWindow,
+                    WorkingDirectory = System.IO.Path.GetDirectoryName(Path),
+                    Verb = runas ? "runas" : ""
+                }
+            );
 
-        public static bool OpenProcess(string Path, ProcessStartInfo startInfo) => 
+        public static bool OpenProcess(string Path, ProcessStartInfo startInfo) =>
             CheckValidExecutableFile(Path) && TryStartProcess(startInfo);
 
-        public static bool OpenProcessIfNotOpend(string Path, ProcessStartInfo startInfo) => 
+        public static bool OpenProcessIfNotOpend(string Path, ProcessStartInfo startInfo) =>
             FindProcess(Path) == null && OpenProcess(Path, startInfo);
 
-        public static bool ProcessExists(string ProcessFileName) => FindProcess(ProcessFileName) != null;
+        public static bool ProcessExists(string ProcessFileName) =>
+            FindProcess(ProcessFileName) != null;
 
-        public static bool CheckValidExecutableFile(string path) => 
+        public static bool CheckValidExecutableFile(string path) =>
             new[] { ".exe", ".bat", ".cmd", ".txt" }.Contains(System.IO.Path.GetExtension(path));
 
         private static bool TryStartProcess(ProcessStartInfo startInfo)
         {
-            try { return Process.Start(startInfo) != null; }
-            catch { return false; }
+            try
+            {
+                return Process.Start(startInfo) != null;
+            }
+            catch (Exception ex)
+            {
+                NLogger.Error("启动进程失败: {0}, 路径: {1}", ex.Message, startInfo.FileName);
+                return false;
+            }
         }
         #endregion
     }

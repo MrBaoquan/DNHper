@@ -1,7 +1,7 @@
 !*.meta
 !DNHper.asmdef.meta
 Applications/*.exe
-obj
-bin
+bin/
+obj/
 bin.meta
 obj.meta

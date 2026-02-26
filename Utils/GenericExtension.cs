@@ -32,17 +32,12 @@ namespace DNHper
 
         public static string ToLogString<T>(this List<T> InList)
         {
-            if (InList.Count <= 0)
+            if (InList == null || InList.Count == 0)
             {
                 return "[]";
             }
-            string _str = "[";
-            InList.ForEach(_ =>
-            {
-                _str += (_.ToString() + ", ");
-            });
-            _str = _str.Substring(0, _str.Length - 2);
-            return _str + "]";
+
+            return "[" + string.Join(", ", InList) + "]";
         }
 
         public static IEnumerable<(T item, int index)> WithIndex<T>(this IEnumerable<T> self) =>

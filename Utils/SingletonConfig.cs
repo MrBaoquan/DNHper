@@ -4,10 +4,10 @@ using System.Collections.Generic;
 using System.IO;
 using System.Xml.Serialization;
 
-
 namespace DNHper
 {
-    public class SingletonConfig<T> : Singleton<T> where T : class, new()
+    public class SingletonConfig<T> : Singleton<T>
+        where T : class, new()
     {
         [XmlIgnore]
         public string FilePath { get; private set; } = string.Empty;
@@ -34,7 +34,8 @@ namespace DNHper
                 }
                 return string.Empty;
             }
-            catch (Exception ex) {
+            catch (Exception ex)
+            {
                 return ex.Message;
             }
         }
@@ -53,5 +54,4 @@ namespace DNHper
             }
         }
     }
-
 }

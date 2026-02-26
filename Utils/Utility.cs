@@ -11,7 +11,7 @@ namespace DNHper
                 InDelegate.DynamicInvoke(Params);
         }
 
-        public static void Dispose(ref IDisposable Target)
+        public static void Dispose(ref IDisposable? Target)
         {
             if (Target != null)
             {

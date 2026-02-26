@@ -8,13 +8,61 @@ namespace DNHper
 {
     public static class NLogger
     {
-        public static string LogFileName { get; set; } = "${shortdate}.log";
-        public static string LogFileDir { get; set; } = AppDomain.CurrentDomain.BaseDirectory;
+        const string configName = "NLog.config.xml";
+        const string defaultLogFileName = "${shortdate}.log";
 
-        private static string LogFilePath => Path.Combine(LogFileDir, LogFileName);
+        private static string logFileDir = string.Empty;
+        public static string LogFileDir
+        {
+            get { return logFileDir; }
+            set { logFileDir = value; }
+        }
 
-        private static Logger _logger = null;
-        private static Logger LoggerInstance
+        private static string logFileName = string.Empty;
+        public static string LogFileName
+        {
+            get { return logFileName; }
+            set { logFileName = value; }
+        }
+
+        static string LogFilePath
+        {
+            get
+            {
+                var fileName = string.IsNullOrEmpty(logFileName) ? defaultLogFileName : logFileName;
+                return Path.Combine(LogFileDir, fileName);
+            }
+        }
+
+        static string ArchiveFilePath
+        {
+            get
+            {
+                // 如果logFileName为空，使用默认日期格式
+                var fileName = string.IsNullOrEmpty(logFileName) ? defaultLogFileName : logFileName;
+                // 获取文件名（不含扩展名）和扩展名
+                var fileNameWithoutExt = Path.GetFileNameWithoutExtension(fileName);
+                var extension = Path.GetExtension(fileName);
+                // 如果logFileName包含NLog变量（如${shortdate}），则直接使用日期时间格式
+                if (fileNameWithoutExt.Contains("${"))
+                {
+                    return Path.Combine(
+                        LogFileDir,
+                        "${date:format=yyyy.MM.dd_HH.mm.ss}" + extension
+                    );
+                }
+                // 否则使用 LogFileName-日期时间.扩展名 格式
+                return Path.Combine(
+                    LogFileDir,
+                    $"{fileNameWithoutExt}-${{date:format=yyyy.MM.dd_HH.mm.ss}}{extension}"
+                );
+            }
+        }
+
+        static NLogger() { }
+
+        private static NLog.Logger? _logger;
+        private static NLog.Logger logger
         {
             get
             {
@@ -43,10 +91,9 @@ namespace DNHper
             var logfile = new NLog.Targets.FileTarget("logfile")
             {
                 FileName = LogFilePath,
-                ArchiveSuffixFormat = string.Empty,
-                ArchiveFileName = Path.Combine(LogFileDir, "Player-${date:format=yyyy.MM.dd-HH.mm.ss}.log"),
+                ArchiveFileName = ArchiveFilePath,
+                ArchiveOldFileOnStartup = true,
                 MaxArchiveFiles = 10,
-                // ArchiveOldFileOnStartup = true,
                 ArchiveEvery = NLog.Targets.FileArchivePeriod.Day,
                 Layout = "${longdate} [${level}] - ${message} ${exception:format=ToString}"
             };
@@ -76,42 +123,47 @@ namespace DNHper
         /// <returns>日志文本列表</returns>
         public static List<string> FetchMessage(int msgCount = -1)
         {
-            var memoryTarget = LogManager.Configuration?.FindTargetByName<NLog.Targets.MemoryTarget>("memoryTarget");
+            var memoryTarget =
+                LogManager.Configuration?.FindTargetByName<NLog.Targets.MemoryTarget>(
+                    "memoryTarget"
+                );
             if (memoryTarget == null)
             {
                 // 内存目标未找到，返回空列表
                 return new List<string>();
             }
 
-            var allMessages = memoryTarget.Logs;
-            if (msgCount > 0 && allMessages.Count > msgCount)
+            // 创建快照以避免并发问题
+            var snapshot = new List<string>(memoryTarget.Logs);
+
+            if (msgCount > 0 && snapshot.Count > msgCount)
             {
-                return allMessages.Skip(allMessages.Count - msgCount).ToList();
+                return snapshot.Skip(snapshot.Count - msgCount).ToList();
             }
 
-            return new List<string>(allMessages);
+            return snapshot;
         }
 
         // 简单封装日志写入接口
-        public static void Info(string message) => LoggerInstance.Info(message);
+        public static void Info(string message) => logger.Info(message);
 
-        public static void Info(string format, params object[] args) => LoggerInstance.Info(format, args);
+        public static void Info(string format, params object[] args) => logger.Info(format, args);
 
-        public static void Debug(string message) => LoggerInstance.Debug(message);
+        public static void Debug(string message) => logger.Debug(message);
 
-        public static void Debug(string format, params object[] args) => LoggerInstance.Debug(format, args);
+        public static void Debug(string format, params object[] args) => logger.Debug(format, args);
 
-        public static void Warn(string message) => LoggerInstance.Warn(message);
+        public static void Warn(string message) => logger.Warn(message);
 
-        public static void Warn(string format, params object[] args) => LoggerInstance.Warn(format, args);
+        public static void Warn(string format, params object[] args) => logger.Warn(format, args);
 
-        public static void Error(string message) => LoggerInstance.Error(message);
+        public static void Error(string message) => logger.Error(message);
 
-        public static void Error(string format, params object[] args) => LoggerInstance.Error(format, args);
+        public static void Error(string format, params object[] args) => logger.Error(format, args);
 
-        public static void Fatal(string message) => LoggerInstance.Fatal(message);
+        public static void Fatal(string message) => logger.Fatal(message);
 
-        public static void Fatal(string format, params object[] args) => LoggerInstance.Fatal(format, args);
+        public static void Fatal(string format, params object[] args) => logger.Fatal(format, args);
 
         /// <summary>
         /// 关闭日志管理器释放资源

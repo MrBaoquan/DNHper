@@ -2,7 +2,6 @@ using System;
 using System.Runtime.InteropServices;
 using System.Text;
 using System.IO;
-using UnityEngine;
 
 namespace DNHper
 {
@@ -22,22 +21,46 @@ namespace DNHper
             [Guid("000214F9-0000-0000-C000-000000000046")]
             private interface IShellLinkW
             {
-                void GetPath([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszFile, int cchMaxPath, IntPtr pfd, int fFlags);
+                void GetPath(
+                    [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszFile,
+                    int cchMaxPath,
+                    IntPtr pfd,
+                    int fFlags
+                );
                 void GetIDList(out IntPtr ppidl);
                 void SetIDList(IntPtr pidl);
-                void GetDescription([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszName, int cchMaxName);
+                void GetDescription(
+                    [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszName,
+                    int cchMaxName
+                );
                 void SetDescription([MarshalAs(UnmanagedType.LPWStr)] string pszName);
-                void GetWorkingDirectory([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszDir, int cchMaxPath);
+                void GetWorkingDirectory(
+                    [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszDir,
+                    int cchMaxPath
+                );
                 void SetWorkingDirectory([MarshalAs(UnmanagedType.LPWStr)] string pszDir);
-                void GetArguments([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszArgs, int cchMaxPath);
+                void GetArguments(
+                    [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszArgs,
+                    int cchMaxPath
+                );
                 void SetArguments([MarshalAs(UnmanagedType.LPWStr)] string pszArgs);
                 void GetHotkey(out short pwHotkey);
                 void SetHotkey(short wHotkey);
                 void GetShowCmd(out int piShowCmd);
                 void SetShowCmd(int iShowCmd);
-                void GetIconLocation([Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszIconPath, int cchIconPath, out int piIcon);
-                void SetIconLocation([MarshalAs(UnmanagedType.LPWStr)] string pszIconPath, int iIcon);
-                void SetRelativePath([MarshalAs(UnmanagedType.LPWStr)] string pszPathRel, int dwReserved);
+                void GetIconLocation(
+                    [Out, MarshalAs(UnmanagedType.LPWStr)] StringBuilder pszIconPath,
+                    int cchIconPath,
+                    out int piIcon
+                );
+                void SetIconLocation(
+                    [MarshalAs(UnmanagedType.LPWStr)] string pszIconPath,
+                    int iIcon
+                );
+                void SetRelativePath(
+                    [MarshalAs(UnmanagedType.LPWStr)] string pszPathRel,
+                    int dwReserved
+                );
                 void Resolve(IntPtr hwnd, int fFlags);
                 void SetPath([MarshalAs(UnmanagedType.LPWStr)] string pszFile);
             }
@@ -52,7 +75,10 @@ namespace DNHper
                 [PreserveSig]
                 int IsDirty();
                 void Load([In, MarshalAs(UnmanagedType.LPWStr)] string pszFileName, uint dwMode);
-                void Save([In, MarshalAs(UnmanagedType.LPWStr)] string pszFileName, [In, MarshalAs(UnmanagedType.Bool)] bool fRemember);
+                void Save(
+                    [In, MarshalAs(UnmanagedType.LPWStr)] string pszFileName,
+                    [In, MarshalAs(UnmanagedType.Bool)] bool fRemember
+                );
                 void SaveCompleted([In, MarshalAs(UnmanagedType.LPWStr)] string pszFileName);
                 void GetCurFile([In, MarshalAs(UnmanagedType.LPWStr)] string ppszFileName);
             }
@@ -160,11 +186,14 @@ namespace DNHper
                     // 设置相对路径
                     if (useRelativePath)
                     {
-                        string shortcutDir = Path.GetDirectoryName(shortcutPath);
-                        string relativePath = GetRelativePath(shortcutDir, targetPath);
-                        if (!string.IsNullOrEmpty(relativePath))
+                        string? shortcutDir = Path.GetDirectoryName(shortcutPath);
+                        if (!string.IsNullOrEmpty(shortcutDir))
                         {
-                            link.SetRelativePath(relativePath, 0);
+                            string? relativePath = GetRelativePath(shortcutDir, targetPath);
+                            if (!string.IsNullOrEmpty(relativePath))
+                            {
+                                link.SetRelativePath(relativePath, 0);
+                            }
                         }
                     }
 
@@ -182,17 +211,10 @@ namespace DNHper
                     Marshal.ReleaseComObject(file);
                     Marshal.ReleaseComObject(link);
 
-                    bool exists = File.Exists(shortcutPath);
-                    if (!exists)
-                    {
-                        Debug.LogError($"快捷方式创建失败，文件不存在: {shortcutPath}");
-                    }
-
-                    return exists;
+                    return File.Exists(shortcutPath);
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Debug.LogError($"创建快捷方式失败: {ex.Message}\n{ex.StackTrace}");
                     return false;
                 }
             }
@@ -200,7 +222,7 @@ namespace DNHper
             /// <summary>
             /// 计算相对路径
             /// </summary>
-            private static string GetRelativePath(string fromPath, string toPath)
+            private static string? GetRelativePath(string fromPath, string toPath)
             {
                 if (string.IsNullOrEmpty(fromPath) || string.IsNullOrEmpty(toPath))
                     return null;
@@ -244,7 +266,14 @@ namespace DNHper
                 string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
                 string shortcutPath = Path.Combine(desktopPath, $"{shortcutName}.lnk");
 
-                return CreateShortcut(shortcutPath, targetPath, arguments, "", description, iconPath);
+                return CreateShortcut(
+                    shortcutPath,
+                    targetPath,
+                    arguments,
+                    "",
+                    description,
+                    iconPath
+                );
             }
 
             /// <summary>
@@ -266,7 +295,9 @@ namespace DNHper
                 string iconPath = ""
             )
             {
-                string startMenuPath = Environment.GetFolderPath(Environment.SpecialFolder.Programs);
+                string startMenuPath = Environment.GetFolderPath(
+                    Environment.SpecialFolder.Programs
+                );
 
                 if (!string.IsNullOrEmpty(folderName))
                 {
@@ -286,7 +317,14 @@ namespace DNHper
 
                 string shortcutPath = Path.Combine(startMenuPath, $"{shortcutName}.lnk");
 
-                return CreateShortcut(shortcutPath, targetPath, arguments, "", description, iconPath);
+                return CreateShortcut(
+                    shortcutPath,
+                    targetPath,
+                    arguments,
+                    "",
+                    description,
+                    iconPath
+                );
             }
 
             /// <summary>
@@ -328,7 +366,7 @@ namespace DNHper
             /// </summary>
             /// <param name="shortcutPath">快捷方式的完整路径</param>
             /// <returns>目标路径，失败返回null</returns>
-            public static string GetShortcutTarget(string shortcutPath)
+            public static string? GetShortcutTarget(string shortcutPath)
             {
                 try
                 {
@@ -336,7 +374,6 @@ namespace DNHper
 
                     if (!File.Exists(shortcutPath))
                     {
-                        Debug.LogWarning($"快捷方式不存在: {shortcutPath}");
                         return null;
                     }
 
@@ -355,9 +392,8 @@ namespace DNHper
 
                     return targetPath;
                 }
-                catch (Exception ex)
+                catch (Exception)
                 {
-                    Debug.LogError($"获取快捷方式目标失败: {ex.Message}");
                     return null;
                 }
             }

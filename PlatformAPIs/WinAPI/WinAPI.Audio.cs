@@ -15,21 +15,38 @@ namespace DNHper
                 Ole32.CoInitialize(IntPtr.Zero);
                 var clsid = AudioConstants.CLSID_MMDeviceEnumerator;
                 var iid = AudioConstants.IID_IMMDeviceEnumerator;
-                int hr = Ole32.CoCreateInstance(ref clsid, IntPtr.Zero, AudioConstants.CLSCTX_ALL, ref iid, out IntPtr deviceEnumeratorPtr);
+                int hr = Ole32.CoCreateInstance(
+                    ref clsid,
+                    IntPtr.Zero,
+                    AudioConstants.CLSCTX_ALL,
+                    ref iid,
+                    out IntPtr deviceEnumeratorPtr
+                );
                 if (hr != 0 || deviceEnumeratorPtr == IntPtr.Zero)
                     return false;
-                _deviceEnumerator = Marshal.GetObjectForIUnknown(deviceEnumeratorPtr) as IMMDeviceEnumerator;
+                _deviceEnumerator =
+                    Marshal.GetObjectForIUnknown(deviceEnumeratorPtr) as IMMDeviceEnumerator;
                 Marshal.Release(deviceEnumeratorPtr);
                 if (_deviceEnumerator == null)
                     return false;
-                hr = _deviceEnumerator.GetDefaultAudioEndpoint(DataFlow.Render, Role.Multimedia, out IMMDevice device);
+                hr = _deviceEnumerator.GetDefaultAudioEndpoint(
+                    DataFlow.Render,
+                    Role.Multimedia,
+                    out IMMDevice device
+                );
                 if (hr != 0 || device == null)
                     return false;
                 var audioEndpointVolumeIid = AudioConstants.IID_IAudioEndpointVolume;
-                hr = device.Activate(ref audioEndpointVolumeIid, AudioConstants.CLSCTX_ALL, IntPtr.Zero, out IntPtr audioEndpointVolumePtr);
+                hr = device.Activate(
+                    ref audioEndpointVolumeIid,
+                    AudioConstants.CLSCTX_ALL,
+                    IntPtr.Zero,
+                    out IntPtr audioEndpointVolumePtr
+                );
                 if (hr != 0 || audioEndpointVolumePtr == IntPtr.Zero)
                     return false;
-                _audioEndpointVolume = Marshal.GetObjectForIUnknown(audioEndpointVolumePtr) as IAudioEndpointVolume;
+                _audioEndpointVolume =
+                    Marshal.GetObjectForIUnknown(audioEndpointVolumePtr) as IAudioEndpointVolume;
                 Marshal.Release(audioEndpointVolumePtr);
                 _audioInitialized = _audioEndpointVolume != null;
                 return _audioInitialized;
@@ -87,7 +104,9 @@ namespace DNHper
                 return -1;
             try
             {
-                return _audioEndpointVolume.GetMasterVolumeLevelScalar(out float volume) == 0 ? volume : -1;
+                return _audioEndpointVolume.GetMasterVolumeLevelScalar(out float volume) == 0
+                    ? volume
+                    : -1;
             }
             catch (Exception ex)
             {
@@ -96,7 +115,8 @@ namespace DNHper
             }
         }
 
-        public static bool SetMasterVolumePercent(int volumePercent) => SetMasterVolume(Math.Max(0, Math.Min(100, volumePercent)) / 100.0f);
+        public static bool SetMasterVolumePercent(int volumePercent) =>
+            SetMasterVolume(Math.Max(0, Math.Min(100, volumePercent)) / 100.0f);
 
         public static int GetMasterVolumePercent()
         {
@@ -198,7 +218,11 @@ namespace DNHper
                 return null;
             try
             {
-                return _audioEndpointVolume.GetVolumeStepInfo(out uint currentStep, out uint totalSteps) == 0
+                return
+                    _audioEndpointVolume.GetVolumeStepInfo(
+                        out uint currentStep,
+                        out uint totalSteps
+                    ) == 0
                     ? (currentStep, totalSteps)
                     : null;
             }
@@ -215,7 +239,12 @@ namespace DNHper
                 return null;
             try
             {
-                return _audioEndpointVolume.GetVolumeRange(out float minDB, out float maxDB, out float incrementDB) == 0
+                return
+                    _audioEndpointVolume.GetVolumeRange(
+                        out float minDB,
+                        out float maxDB,
+                        out float incrementDB
+                    ) == 0
                     ? (minDB, maxDB, incrementDB)
                     : null;
             }
