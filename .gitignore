@@ -3,3 +3,5 @@
 Applications/*.exe
 obj
 bin
+bin.meta
+obj.meta

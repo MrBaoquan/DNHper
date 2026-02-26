@@ -36,7 +36,7 @@ namespace DNHper
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"音频初始化失败: {ex.Message}");
+                UnityEngine.Debug.LogError($"音频初始化失败: {ex.Message}");
                 return false;
             }
         }
@@ -60,7 +60,7 @@ namespace DNHper
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"音频清理失败: {ex.Message}");
+                UnityEngine.Debug.LogError($"音频清理失败: {ex.Message}");
             }
         }
 
@@ -76,7 +76,7 @@ namespace DNHper
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"设置音量失败: {ex.Message}");
+                UnityEngine.Debug.LogError($"设置音量失败: {ex.Message}");
                 return false;
             }
         }
@@ -91,7 +91,7 @@ namespace DNHper
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"获取音量失败: {ex.Message}");
+                UnityEngine.Debug.LogError($"获取音量失败: {ex.Message}");
                 return -1;
             }
         }
@@ -107,15 +107,25 @@ namespace DNHper
         public static bool SetMute(bool mute)
         {
             if (!InitializeAudio())
+            {
+                UnityEngine.Debug.LogWarning("音频系统未初始化，无法设置静音状态");
                 return false;
+            }
+
             try
             {
                 var guid = AudioConstants.GUID_NULL;
-                return _audioEndpointVolume.SetMute(mute, ref guid) == 0;
+                int hr = _audioEndpointVolume.SetMute(mute, ref guid);
+                if (hr != 0)
+                {
+                    UnityEngine.Debug.LogError($"SetMute 调用失败, HRESULT: 0x{hr:X8}");
+                    return false;
+                }
+                return true;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"设置静音失败: {ex.Message}");
+                UnityEngine.Debug.LogError($"设置静音失败: {ex.Message}");
                 return false;
             }
         }
@@ -126,11 +136,17 @@ namespace DNHper
                 return null;
             try
             {
-                return _audioEndpointVolume.GetMute(out bool mute) == 0 ? mute : null;
+                int hr = _audioEndpointVolume.GetMute(out bool mute);
+                if (hr != 0)
+                {
+                    UnityEngine.Debug.LogError($"GetMute 调用失败, HRESULT: 0x{hr:X8}");
+                    return null;
+                }
+                return mute;
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"获取静音状态失败: {ex.Message}");
+                UnityEngine.Debug.LogError($"获取静音状态失败: {ex.Message}");
                 return null;
             }
         }
@@ -155,7 +171,7 @@ namespace DNHper
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"音量步进增加失败: {ex.Message}");
+                UnityEngine.Debug.LogError($"音量步进增加失败: {ex.Message}");
                 return false;
             }
         }
@@ -171,7 +187,7 @@ namespace DNHper
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"音量步进减少失败: {ex.Message}");
+                UnityEngine.Debug.LogError($"音量步进减少失败: {ex.Message}");
                 return false;
             }
         }
@@ -188,7 +204,7 @@ namespace DNHper
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"获取音量步进信息失败: {ex.Message}");
+                UnityEngine.Debug.LogError($"获取音量步进信息失败: {ex.Message}");
                 return null;
             }
         }
@@ -205,7 +221,7 @@ namespace DNHper
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"获取音量范围失败: {ex.Message}");
+                UnityEngine.Debug.LogError($"获取音量范围失败: {ex.Message}");
                 return null;
             }
         }

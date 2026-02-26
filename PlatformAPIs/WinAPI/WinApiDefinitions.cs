@@ -283,8 +283,8 @@ namespace DNHper
         int SetChannelVolumeLevelScalar(uint nChannel, float fLevel, ref Guid pguidEventContext);
         int GetChannelVolumeLevel(uint nChannel, out float pfLevelDB);
         int GetChannelVolumeLevelScalar(uint nChannel, out float pfLevel);
-        int SetMute(bool bMute, ref Guid pguidEventContext);
-        int GetMute(out bool pbMute);
+        int SetMute([MarshalAs(UnmanagedType.Bool)] bool bMute, ref Guid pguidEventContext);
+        int GetMute([MarshalAs(UnmanagedType.Bool)] out bool pbMute);
         int GetVolumeStepInfo(out uint pnStep, out uint pnStepCount);
         int VolumeStepUp(ref Guid pguidEventContext);
         int VolumeStepDown(ref Guid pguidEventContext);
