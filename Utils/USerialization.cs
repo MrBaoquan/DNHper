@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Serialization;
 using MessagePack;
@@ -109,10 +110,23 @@ namespace DNHper
 
             try
             {
+#if ENABLE_IL2CPP
+                // IL2CPP XmlSerializer 无法处理 XmlComment 节点，
+                // 即使 IgnoreComments=true 也会在内部 DOM 中触发 InvalidCastException。
+                // 读取文件内容后用正则剥离注释，从字符串创建 reader。
+                var content = File.ReadAllText(path);
+                if (content.Contains("<!--"))
+                    content = Regex.Replace(content, @"<!--[\s\S]*?-->", string.Empty);
+                using (var reader = XmlReader.Create(new StringReader(content), settings))
+                {
+                    return (T)serializer.Deserialize(reader);
+                }
+#else
                 using (var reader = XmlReader.Create(path, settings))
                 {
                     return (T)serializer.Deserialize(reader);
                 }
+#endif
             }
             catch (Exception)
             {
