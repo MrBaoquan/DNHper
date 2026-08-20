@@ -1,6 +1,5 @@
 using System;
 using System.IO;
-using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Serialization;
 using MessagePack;
@@ -75,11 +74,7 @@ namespace DNHper
 
                 using (var writer = XmlWriter.Create(path, settings))
                 {
-                    serializer.Serialize(
-                        writer,
-                        item,
-                        new XmlSerializerNamespaces(new[] { XmlQualifiedName.Empty })
-                    );
+                    serializer.Serialize(writer, item, new XmlSerializerNamespaces(new[] { XmlQualifiedName.Empty }));
                     // serializer.Serialize(writer, item);
                 }
             }
@@ -110,23 +105,12 @@ namespace DNHper
 
             try
             {
-#if ENABLE_IL2CPP
-                // IL2CPP XmlSerializer 无法处理 XmlComment 节点，
-                // 即使 IgnoreComments=true 也会在内部 DOM 中触发 InvalidCastException。
-                // 读取文件内容后用正则剥离注释，从字符串创建 reader。
-                var content = File.ReadAllText(path);
-                if (content.Contains("<!--"))
-                    content = Regex.Replace(content, @"<!--[\s\S]*?-->", string.Empty);
-                using (var reader = XmlReader.Create(new StringReader(content), settings))
+                using (var stream = new FileStream(path, FileMode.Open, FileAccess.Read, FileShare.Read))
+                using (var streamReader = new StreamReader(stream, System.Text.Encoding.UTF8))
+                using (var reader = XmlReader.Create(streamReader, settings))
                 {
                     return (T)serializer.Deserialize(reader);
                 }
-#else
-                using (var reader = XmlReader.Create(path, settings))
-                {
-                    return (T)serializer.Deserialize(reader);
-                }
-#endif
             }
             catch (Exception)
             {
@@ -156,11 +140,7 @@ namespace DNHper
         /// <summary>
         /// 序列化为格式化的 XML（可读性优先）
         /// </summary>
-        public static void SerializeXMLFormatted(
-            object item,
-            string path,
-            string indentChars = "    "
-        )
+        public static void SerializeXMLFormatted(object item, string path, string indentChars = "    ")
         {
             var settings = new XmlWriterSettings
             {
